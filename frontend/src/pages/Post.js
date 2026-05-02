@@ -17,7 +17,7 @@ export default function App() {
 
   const deletePost = async () => {    
     console.log(typeof(passwordRef.current.value));
-    await fetch(window.location.protocol + `//${baseUrl}/posts/${params.id}`, {
+    await fetch(`${baseUrl}/api/posts/${params.id}`, {
       method: "DELETE",
       body: {"pass": passwordRef.current.value} //IMPORTANT not working atm -- BUG
     }).then(resp => { 
@@ -34,7 +34,7 @@ export default function App() {
 
   useEffect(() => {
     const loadPost = async () => {
-      let results = await fetch(window.location.protocol + `//${baseUrl}/posts/${params.id}`).then(resp => resp.json());      
+      let results = await fetch(`${baseUrl}/api/posts/${params.id}`).then(resp => resp.json());      
       setPost(results);
     }
     loadPost();

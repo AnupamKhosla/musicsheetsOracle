@@ -35,7 +35,7 @@ app.get('/', function(req, res) {
 });
 
 
-app.use("/posts", posts);
+app.use("/api/posts", posts);
 
 
 

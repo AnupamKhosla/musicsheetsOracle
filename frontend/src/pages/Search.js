@@ -116,9 +116,9 @@ export default function SearchResults() {
       //const current_page = urlParams.get('page') || 1;
       //use live url instead of searchQuery
       //when Navigation search happens searchQuery is not updated
-      var tmp  = await fetch(window.location.protocol + `//${baseUrl}/posts/count${query}`).then(resp => resp.json());
+      var tmp  = await fetch(`${baseUrl}/api/posts/count${query}`).then(resp => resp.json());
       set_result_total(tmp.count);
-      results = await fetch(window.location.protocol + `//${baseUrl}/posts${query}`).then(resp => resp.json());      
+      results = await fetch(`${baseUrl}/api/posts${query}`).then(resp => resp.json());      
       setPosts(results);
     }
     loadPosts();

@@ -12,7 +12,7 @@ export default function App() {
 
   useEffect(() => {
     const loadPosts = async () => {
-      let results = await fetch(window.location.protocol + `//${baseUrl}/posts/latest`).then(resp => resp.json());
+      let results = await fetch(`${baseUrl}/api/posts/latest`).then(resp => resp.json());
       setPosts(results);      
     }
 

@@ -25,7 +25,7 @@ export default function App() {
   let [toastOpen, setToastOpen] = useState(false);
 
   const handleSubmit = async () => {    
-    await fetch(window.location.protocol + `//${baseUrl}/posts`, {
+    await fetch(`${baseUrl}/api/posts`, {
       method: "POST",
       headers: {
         "content-type": "application/json"
