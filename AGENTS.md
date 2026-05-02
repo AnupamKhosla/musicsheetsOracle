@@ -38,6 +38,11 @@ This applies to ALL tools and operations:
 - Answering questions with text only
 - Checking status (`git status`, `pm2 status`, etc.)
 
+### Interaction Rules
+
+- **Never ask the user for info I can check myself.** Instead say "can I check X?" and do it.
+- If unsure about something on the user's machine, offer to check rather than ask them to run a command and tell me.
+
 ### User Override
 
 If the user says "exit ask mode" or "switch to execution mode", respect it. Otherwise, default to asking first.
@@ -57,3 +62,7 @@ When your are openclaw find tools skills agent etc which can cross check outdate
 
 ### Coding Conventions
 - Always use modern ES module syntax (`.mjs`, `import`/`export`). Never use CommonJS (`.cjs`, `require()`).
+
+### Documentation
+- Deployment and implementation status: `docs/deployment.md`
+- Update docs when infrastructure or architecture changes.
