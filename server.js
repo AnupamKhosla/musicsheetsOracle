@@ -73,7 +73,9 @@ app.post('/api/webhook', express.raw({ type: '*/*' }), (req, res) => {
   }
 
   const payload = JSON.parse(Buffer.isBuffer(req.body) ? req.body.toString() : req.body);
-  if (payload.ref !== 'refs/heads/main') return res.status(200).send('Skipped: not main');
+
+  // GitHub ping — acknowledge only, don't deploy
+  if (req.headers['x-github-event'] === 'ping') return res.send('pong');
 
   res.status(202).send('Deploy started');
 
