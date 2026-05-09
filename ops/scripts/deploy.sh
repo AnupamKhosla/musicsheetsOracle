@@ -65,7 +65,7 @@ touch "$MAINT_FLAG"
 # Pull + install + build
 log "Git pull"
 cd "$REPO_DIR"
-git pull --ff-only origin main || log "WARN: git pull failed — continuing with existing checkout"
+git pull --ff-only origin master || log "WARN: git pull failed — continuing with existing checkout"
 
 log "Installing dependencies"
 npm install
