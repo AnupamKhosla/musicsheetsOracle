@@ -63,25 +63,39 @@
     }
     #log {
       padding: 14px;
-      font-size: 0.75rem;
-      line-height: 1.65;
+      font-size: 0.8125rem;
+      line-height: 1.75;
       white-space: pre-wrap;
       word-break: break-all;
       min-height: 300px;
       max-height: 65vh;
       overflow-y: auto;
-      color: #8b949e;
+      color: #d1d5db;
     }
     #log::-webkit-scrollbar { width: 6px; }
     #log::-webkit-scrollbar-track { background: #0d1117; }
     #log::-webkit-scrollbar-thumb { background: #21262d; border-radius: 3px; }
 
-    .log-line { padding: 1px 0; }
-    .log-line.ts    { color: #58a6ff; }
-    .log-line.info  { color: #8b949e; }
-    .log-line.warn  { color: #d29922; }
-    .log-line.error { color: #f85149; }
-    .log-line.ok    { color: #3fb950; }
+     .log-line { padding: 1px 0; }
+      .log-line.ts    { color: #58a6ff; }
+      .log-line.info  { color: #d1d5db; }
+      .log-line.warn  { color: #d29922; }
+      .log-line.error { color: #f85149; }
+      .log-line.ok    { color: #3fb950; }
+
++      .copy-btn {
++        background: #21262d;
++        border: 1px solid #30363d;
++        color: #8b949e;
++        padding: 3px 10px;
++        border-radius: 4px;
++        cursor: pointer;
++        font-family: inherit;
++        font-size: 0.65rem;
++        transition: all 0.15s;
++      }
++      .copy-btn:hover { background: #30363d; color: #c9d1d9; }
++      .copy-btn.copied { background: #1a3a2a; border-color: #238636; color: #3fb950; }
 
     .footer {
       max-width: 800px;
@@ -105,7 +119,7 @@
   <div class="log-container">
     <div class="log-header">
       <span>stdout</span>
-      <span id="last-update"></span>
+      <span><button class="copy-btn" id="copy-btn">Copy Logs</button> <span id="last-update"></span></span>
     </div>
     <pre id="log">Waiting for pipeline...</pre>
   </div>
@@ -178,6 +192,23 @@
         }
       } catch(e) {}
     }
+
+    document.getElementById('copy-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('copy-btn');
+      const text = logEl.textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'Copy Logs';
+          btn.classList.remove('copied');
+        }, 2000);
+      } catch(e) {
+        btn.textContent = 'Failed';
+        setTimeout(() => { btn.textContent = 'Copy Logs'; }, 2000);
+      }
+    });
 
     fetchLogs();
     setInterval(fetchLogs, 2000);
