@@ -26,6 +26,9 @@
 | .env (MongoDB URI)         | ✅ Done | Created on VPS via `cat > .env`                 |
 | Express serves static      | ✅ Done | `express.static(frontend/build)` on port 5050   |
 | PM2 auto-start             | ✅ Done | `pm2 save` + `pm2 startup`                     |
+| Webhook auto-deploy        | ✅ Done | GitHub push → /api/webhook → deploy.sh → PM2 reload |
+| Maintenance mode           | ✅ Done | Flag-file based; dark UI with live logs + IST clock |
+| Pipeline lock              | ✅ Done | flock-based; prevents concurrent deploys        |
 
 ## Pending
 
@@ -33,8 +36,8 @@
 |--------------------------|----------|------------------------------------------|
 | Swap file permanent      | 🟡 Med   | Add to /etc/fstab for reboot persistence |
 | Remove unused imports    | 🟢 Low   | Lint warnings in frontend                |
-| Cloudflared tunnel (VPS) | 🔴 High  | Permanent backup subdomain               |
-| Worker.dev proxy         | 🔴 High  | Pretty backup URL → tunnel               |
+| Cloudflared tunnel (VPS) | 🔴 High  | Next: permanent backup subdomain         |
+| Worker.dev proxy         | 🔴 High  | Next: pretty backup URL → tunnel         |
 | Pages + iframe backup    | 🟡 Med   | Static frontend on CDN                   |
 | GitHub Pages mirror      | 🟢 Low   | Plan: auto-deploy frontend build         |
 | Firebase hosting mirror  | 🟢 Low   | Plan: alternative backup                 |
@@ -46,7 +49,25 @@
 Browser → musicsheets.site → Cloudflare DNS → VPS:443 → Nginx → :5050 → Express → MongoDB Atlas
 ```
 
-### Backup (Cloudflare Tunnel)
+### Pipeline (CI/CD)
+```
+GitHub push master
+  → webhook POST to musicsheets.site/api/webhook
+  → Express HMAC-validates → spawns deploy.sh
+  → deploy.sh:
+      1. flock lock check (prevents concurrent runs)
+      2. touch /tmp/musicsheets-maintenance → Express serves maintenance UI
+      3. git pull --ff-only origin master
+      4. npm install (root)
+      5. cd frontend && npm install --include=dev && npm run build
+      6. Build FAILS: maintenance stays ON, logs visible → SSH to fix
+      7. Build OK: rm flag, pm2 reload, lock released
+```
+
+Deploy output live-viewable at any domain URL during maintenance.
+Webhook stays open during maintenance for retrigger.
+
+### Backup (Cloudflare Tunnel — NEXT)
 ```
 Browser → name.cfargotunnel.com → Cloudflare Edge → cloudflared (outbound tunnel) → :5050
                                                        (bypasses nginx, no open inbound ports)

@@ -12,8 +12,8 @@ This file serves as persistent memory across OpenCode chat sessions. Since the A
 
 ### Current Status
 - **Last Updated**: 2026-05-09
-- **Active Branches**: main
-- **Current Focus**: Multi-layered backup domains via Cloudflare Tunnel + Workers.dev + Pages + future GitHub Pages/Firebase mirrors. Testing tunnel locally, then VPS deployment.
+- **Active Branches**: master
+- **Current Focus**: Pipeline COMPLETED. Next: Cloudflare free domain backup (tunnel + workers.dev).
 
 ### Recent Decisions
 - Using PM2 for process management
@@ -112,6 +112,16 @@ TEMPLATE for new entries (copy and fill):
   - **Category**: infrastructure
   - **Description**: Planned multi-layered backup domain architecture. Primary: musicsheets.site via nginx. Backup: Cloudflare Tunnel (cfargotunnel.com) bypassing nginx. Pretty backup: Workers.dev proxy → tunnel. Future: Pages iframe, GitHub Pages mirror, Firebase hosting. Docmented VPS inventory (Oracle e2micro primary, Hostinger secondary) and full architecture in deployment.md. No inbound ports needed for tunnel — uses outbound WebSocket/QUIC.
   - **Files**: `docs/deployment.md`, `docs/MEMORY.md`
+  - **Commands**: None
+- **Date**: 2026-05-09
+  - **Category**: infrastructure
+  - **Description**: Deploy pipeline COMPLETED. GitHub push → webhook HMAC-validated → deploy.sh with flock lock → git pull → npm install --include=dev → react-scripts build → pm2 reload. Maintenance mode via flag file (/tmp), serves dark UI with live logs + IST clock + copy button. Express routes: POST /api/webhook, GET /api/health. Server.js middleware serves maintenance page during deploys (keeps webhook open). Security: HMAC-SHA256 validation using WEBHOOK_SECRET from .env. Fixed concurrent deploy log wipe (flock before log init). Fixed missing devDeps in production build (--include=dev). Deploy.sh uses dynamic repo path from Express. No hardcoded VPS paths in repo.
+  - **Files**: `server.js`, `ops/scripts/deploy.sh`, `ops/maintenance/index.html`, `docs/deployment.md`
+  - **Commands**: None
+- **Date**: 2026-05-09
+  - **Category**: infrastructure
+  - **Description**: Cloudflare free domain setup (tunnel + workers.dev) is NEXT TASK. Not yet started. Will test tunnel locally then deploy on Oracle VPS + worker proxy.
+  - **Files**: None yet
   - **Commands**: None
 
 ## Notes

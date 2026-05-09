@@ -75,6 +75,29 @@ Browser → *.github.io / *.pages.dev → static files on CDN
     API calls → https://musicsheets.site → VPS → :5050
 ```
 
+## Pipeline (Auto-Deploy)
+
+Every `git push master` triggers:
+
+```
+GitHub push → POST /api/webhook (HMAC-SHA256)
+            → Express validates → spawns deploy.sh
+            → Maintenance flag → dark UI with live logs
+            → git pull --ff-only → npm install → build → pm2 reload
+            → Flag removed → site live
+```
+
+### Pipeline Files
+- `server.js` — `/api/webhook` (POST, HMAC-validated), `/api/health` (GET), maintenance middleware
+- `ops/scripts/deploy.sh` — flock lock, git pull, npm install --include=dev, build, pm2 reload
+- `ops/maintenance/index.html` — dark UI, IST clock, colour-coded logs, copy button, auto-refresh
+
+### Security
+- `WEBHOOK_SECRET` in `.env` (gitignored, VPS-only)
+- HMAC-SHA256 validation of `X-Hub-Signature-256` header
+- Lock file prevents concurrent deploys
+- Webhook endpoint stays open during maintenance for retrigger
+
 ## Deprecated
 
 - `setBaseUrl.js` — previously wrote hardcoded URLs to `config.js` at build time. Replaced by runtime `window.location` detection. Keep for reference, do not run.
