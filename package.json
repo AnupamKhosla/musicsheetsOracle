@@ -21,7 +21,6 @@
     "scripts": {
         "start": "node server.js",
         "start_dev": "concurrently 'node --watch server.js' 'cd frontend/src && npm start'",
-        "test": "mocha --recursive tests --exit && cd frontend/src && npm install && npm run build && cd ../",
-        "setBaseUrl": "node setBaseUrl.js"
+        "test": "mocha --recursive tests --exit && cd frontend/src && npm install && npm run build && cd ../"
     }
 }

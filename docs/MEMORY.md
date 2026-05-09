@@ -11,9 +11,9 @@ This file serves as persistent memory across OpenCode chat sessions. Since the A
 ## Project State
 
 ### Current Status
-- **Last Updated**: 2026-05-03
+- **Last Updated**: 2026-05-09
 - **Active Branches**: main
-- **Current Focus**: Infrastructure deployment COMPLETE. Next: application features, database setup, monitoring.
+- **Current Focus**: Multi-layered backup domains via Cloudflare Tunnel + Workers.dev + Pages + future GitHub Pages/Firebase mirrors. Testing tunnel locally, then VPS deployment.
 
 ### Recent Decisions
 - Using PM2 for process management
@@ -108,8 +108,15 @@ TEMPLATE for new entries (copy and fill):
   - **Description**: Restored `AGENTS.md` in project root. Updated security rules: `rm` commands set to `ask` (previously `deny`) to allow file management inside project folder. Infrastructure-level `ssh*` and `sudo rm*` blocks remain absolute.
   - **Files**: `AGENTS.md`, `~/.config/opencode/opencode.json`
   - **Commands**: None
+- **Date**: 2026-05-09
+  - **Category**: infrastructure
+  - **Description**: Planned multi-layered backup domain architecture. Primary: musicsheets.site via nginx. Backup: Cloudflare Tunnel (cfargotunnel.com) bypassing nginx. Pretty backup: Workers.dev proxy → tunnel. Future: Pages iframe, GitHub Pages mirror, Firebase hosting. Docmented VPS inventory (Oracle e2micro primary, Hostinger secondary) and full architecture in deployment.md. No inbound ports needed for tunnel — uses outbound WebSocket/QUIC.
+  - **Files**: `docs/deployment.md`, `docs/MEMORY.md`
+  - **Commands**: None
 
 ## Notes
 <!-- Add any other persistent notes, links, or reminders here -->
 - Check docs/hallucinations.md when correcting past mistakes
 - Update docs/deployment.md when infrastructure changes
+- VPS providers in use: Oracle Cloud e2.micro (primary - musicsheets.site), Hostinger (secondary), may add more
+- Goal: never lose access to the app — multiple free Cloudflare backup URLs + GitHub Pages + Firebase hosting as fallback layers

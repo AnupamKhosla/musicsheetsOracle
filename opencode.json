@@ -1,0 +1,195 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "gh-grep": {
+      "type": "remote",
+      "url": "https://mcp.grep.app"
+    },
+    "memory": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },
+    "fetch": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ]
+    },
+    "sequential-thinking": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "git": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-git"
+      ]
+    },
+    "sentry": {
+      "type": "remote",
+      "url": "https://mcp.sentry.dev/mcp",
+      "oauth": {}
+    },
+    "sqlite": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-sqlite"
+      ]
+    },
+    "redis": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-redis"
+      ],
+      "environment": {
+        "REDIS_URL": "{env:REDIS_URL}"
+      }
+    },
+    "figma": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "figma-developer-mcp"
+      ],
+      "environment": {
+        "FIGMA_API_KEY": "{env:FIGMA_API_KEY}"
+      }
+    },
+    "playwright-mcp": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@microsoft/playwright-mcp"
+      ]
+    },
+    "-erver-laywright": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "n"
+      ]
+    }
+  },
+  "agent": {
+    "code-reviewer": {
+      "steps": 15
+    },
+    "dependency-manager": {
+      "steps": 10
+    },
+    "docs-writer": {
+      "steps": 10
+    },
+    "git-workflow-manager": {
+      "steps": 8
+    },
+    "technical-writer": {
+      "steps": 10
+    },
+    "cloud-architect": {
+      "steps": 15
+    },
+    "database-administrator": {
+      "steps": 15
+    },
+    "deployment-engineer": {
+      "steps": 15
+    },
+    "network-engineer": {
+      "steps": 12
+    },
+    "security-engineer": {
+      "steps": 15
+    },
+    "accessibility-tester": {
+      "steps": 10
+    },
+    "architect-reviewer": {
+      "steps": 15
+    },
+    "compliance-auditor": {
+      "steps": 15
+    },
+    "debugger": {
+      "steps": 20
+    },
+    "error-detective": {
+      "steps": 15
+    },
+    "penetration-tester": {
+      "steps": 15
+    },
+    "performance-engineer": {
+      "steps": 15
+    },
+    "security-auditor": {
+      "steps": 15
+    },
+    "database-optimizer": {
+      "steps": 15
+    },
+    "llm-architect": {
+      "steps": 15
+    },
+    "sql-pro": {
+      "steps": 15
+    },
+    "seo-specialist": {
+      "steps": 10
+    },
+    "ux-researcher": {
+      "steps": 10
+    },
+    "multi-agent-coordinator": {
+      "steps": 10
+    },
+    "task-distributor": {
+      "steps": 5
+    },
+    "workflow-orchestrator": {
+      "steps": 10
+    },
+    "competitive-analyst": {
+      "steps": 12
+    },
+    "data-researcher": {
+      "steps": 12
+    },
+    "market-researcher": {
+      "steps": 10
+    },
+    "research-analyst": {
+      "steps": 10
+    },
+    "trend-analyst": {
+      "steps": 10
+    }
+  },
+  "compaction": {
+    "auto": true,
+    "prune": true
+  }
+}

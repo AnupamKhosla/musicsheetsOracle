@@ -49,10 +49,10 @@ This agent operates on local code only. Any infrastructure changes on remote ser
 **NEVER execute any action without explicit user approval.**
 
 This applies to ALL tools and operations:
-- `bash` — running any shell command
-- `write` — creating new files
-- `edit` — modifying existing files
-- `read` — reading files is okay without asking
+- `bash` — running any shell command (requires approval)
+- `write` — creating new files (requires approval)
+- `edit` — modifying existing files (requires approval)
+- `read` — NEVER ask to read files within `/Users/anupamkhosla/Desktop/Projects/`; outside Projects dir requires approval
 - `glob`, `grep` — searching is okay without asking
 
 ### Required Workflow
@@ -75,9 +75,8 @@ This applies to ALL tools and operations:
 
 ### What Does NOT Require Approval
 
-- Reading files or directories (`read`, `ls`, `cat`)
-- Searching (`grep`, `find`, `glob`)
-- Fetching web content
+- Reading files or directories within `/Users/anupamkhosla/Desktop/Projects/` — NEVER ask, just read
+- Searching within the Projects directory (`grep`, `find`, `glob`)
 - Answering questions with text only
 - Checking status (`git status`, `pm2 status`, etc.)
 
