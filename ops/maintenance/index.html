@@ -1,59 +1,187 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Site Updating — musicsheets</title>
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 60px 20px; }
-      .spinner { width: 48px; height: 48px; border: 4px solid #334155; border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 24px; }
-      @keyframes spin { to { transform: rotate(360deg); } }
-      h1 { font-size: 1.5rem; margin-bottom: 8px; }
-      p { color: #94a3b8; margin-bottom: 32px; }
-      #log { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 20px; max-width: 700px; width: 100%; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.8125rem; line-height: 1.6; white-space: pre-wrap; word-break: break-all; min-height: 100px; max-height: 60vh; overflow-y: auto; }
-      .dot { animation: pulse 1.5s infinite; }
-      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-    </style>
-  </head>
-  <body>
-    <div class="spinner"></div>
-    <h1>Deployment in progress</h1>
-    <p>Site will be back in ~60 seconds<span class="dot">...</span></p>
-    <pre id="log">Waiting for pipeline logs...</pre>
-    <script>
-      const logEl = document.getElementById('log');
-      let retries = 0;
-      const MAX_RETRIES = 40; // ~2 minutes at 3s intervals
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pipeline — musicsheets</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: ui-monospace, 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      background: #0a0a0f;
+      color: #c9d1d9;
+      min-height: 100vh;
+      padding: 32px 20px;
+    }
+    .header {
+      max-width: 800px;
+      margin: 0 auto 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #21262d;
+    }
+    .header h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #58a6ff;
+      margin-bottom: 4px;
+    }
+    .header .meta {
+      font-size: 0.75rem;
+      color: #8b949e;
+    }
+    .header .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+    }
+    .header .status .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #3fb950;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 
-      async function fetchLogs() {
-        try {
-          const resp = await fetch('/logs.html?' + Date.now(), { cache: 'no-store' });
-          if (resp.ok) {
-            const text = await resp.text();
-            logEl.textContent = text || 'Pipeline running...';
-            retries = 0;
-          }
-        } catch(e) {
-          retries++;
-          if (retries > MAX_RETRIES) {
-            logEl.textContent = 'Logs unavailable. If this persists, SSH into server.';
-          }
+    .log-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #0d1117;
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 14px;
+      background: #161b22;
+      border-bottom: 1px solid #21262d;
+      font-size: 0.7rem;
+      color: #8b949e;
+    }
+    #log {
+      padding: 14px;
+      font-size: 0.75rem;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      word-break: break-all;
+      min-height: 300px;
+      max-height: 65vh;
+      overflow-y: auto;
+      color: #8b949e;
+    }
+    #log::-webkit-scrollbar { width: 6px; }
+    #log::-webkit-scrollbar-track { background: #0d1117; }
+    #log::-webkit-scrollbar-thumb { background: #21262d; border-radius: 3px; }
+
+    .log-line { padding: 1px 0; }
+    .log-line.ts    { color: #58a6ff; }
+    .log-line.info  { color: #8b949e; }
+    .log-line.warn  { color: #d29922; }
+    .log-line.error { color: #f85149; }
+    .log-line.ok    { color: #3fb950; }
+
+    .footer {
+      max-width: 800px;
+      margin: 16px auto 0;
+      font-size: 0.7rem;
+      color: #484f58;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>musicsheets pipeline</h1>
+    <div class="meta">
+      <span id="ist"></span>
+      &nbsp;|&nbsp;
+      <span class="status"><span class="dot"></span> deploying</span>
+    </div>
+  </div>
+
+  <div class="log-container">
+    <div class="log-header">
+      <span>stdout</span>
+      <span id="last-update"></span>
+    </div>
+    <pre id="log">Waiting for pipeline...</pre>
+  </div>
+
+  <div class="footer">
+    Site auto-reloads when deployment finishes. Do not close this page.
+  </div>
+
+  <script>
+    const logEl = document.getElementById('log');
+    const istEl = document.getElementById('ist');
+    const lastUpdateEl = document.getElementById('last-update');
+    let retries = 0;
+    const MAX_RETRIES = 60;
+
+    function formatIST(d) {
+      return d.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    }
+
+    function updateTime() {
+      istEl.textContent = 'IST ' + formatIST(new Date());
+    }
+    updateTime();
+    setInterval(updateTime, 1000);
+
+    function colorize(text) {
+      return text.split('\n').map(line => {
+        let cls = 'info';
+        if (line.match(/\[.*\]/)) cls = 'ts';
+        if (line.match(/FAILED|FATAL|ERROR/i)) cls = 'error';
+        if (line.match(/WARN/i)) cls = 'warn';
+        if (line.match(/SUCCESS|complete|live|Build successful/i)) cls = 'ok';
+        return '<span class="log-line ' + cls + '">' + line + '</span>';
+      }).join('\n');
+    }
+
+    async function fetchLogs() {
+      try {
+        const resp = await fetch('/logs.html?' + Date.now(), { cache: 'no-store' });
+        if (resp.ok) {
+          const text = await resp.text();
+          logEl.innerHTML = colorize(text) || '<span class="log-line info">Pipeline running...</span>';
+          lastUpdateEl.textContent = formatIST(new Date());
+          retries = 0;
+        }
+      } catch(e) {
+        retries++;
+        if (retries > MAX_RETRIES) {
+          logEl.innerHTML = '<span class="log-line error">Logs unavailable. SSH into VPS.</span>';
         }
       }
+    }
 
-      async function checkAlive() {
-        try {
-          const resp = await fetch('/api/health', { cache: 'no-store' });
-          if (resp.ok && resp.status === 200) {
+    async function checkAlive() {
+      try {
+        const resp = await fetch('/api/health', { cache: 'no-store' });
+        if (resp.ok && resp.status === 200) {
+          const data = await resp.json();
+          if (!data.maintenance) {
             window.location.reload();
           }
-        } catch(e) {}
-      }
+        }
+      } catch(e) {}
+    }
 
-      fetchLogs();
-      setInterval(fetchLogs, 3000);
-      setInterval(checkAlive, 5000);
-    </script>
-  </body>
+    fetchLogs();
+    setInterval(fetchLogs, 2000);
+    setInterval(checkAlive, 4000);
+  </script>
+</body>
 </html>

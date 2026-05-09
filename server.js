@@ -36,8 +36,11 @@ const LOGS_FILE = '/tmp/musicsheets-logs.html';
 app.use((req, res, next) => {
   if (req.path === '/api/webhook' || req.path === '/api/health') return next();
   if (fs.existsSync(MAINT_FLAG)) {
-    if (fs.existsSync(LOGS_FILE)) return res.sendFile(LOGS_FILE);
-    return res.type('html').send('<pre>Pipeline starting...</pre>');
+    if (req.path === '/logs.html' && fs.existsSync(LOGS_FILE))
+      return res.sendFile(LOGS_FILE);
+    const maintPage = path.join(path.resolve(), 'ops/maintenance/index.html');
+    if (fs.existsSync(maintPage)) return res.sendFile(maintPage);
+    return res.status(503).type('html').send('<h1>Site updating</h1><p>Back soon.</p>');
   }
   next();
 });

@@ -13,7 +13,7 @@
 #   3. Pipe all output to /tmp/musicsheets-logs.html (live-viewable)
 #   4. git pull → npm install → build frontend
 #   5. Build FAILS: maintenance stays ON, logs visible forever → SSH to fix
-#   6. Build OK: remove flag, pm2 reload, remove lock
+#   6. Build OK: remove flag, pm2 reload
 #   7. trap: removes lock on unexpected crash (maintenance flag stays — visible failure)
 
 set -euo pipefail
@@ -29,14 +29,14 @@ MAINT_FLAG="/tmp/musicsheets-maintenance"
 LOG_FILE="/tmp/musicsheets-logs.html"
 LOCK_FILE="/tmp/musicsheets-deploy.lock"
 
-# Single-run lock
+# --- Lock FIRST (before touching logs or flag) ---
 exec 9>"$LOCK_FILE"
 if ! flock -n 9; then
   echo "Deploy already in progress" >&2
   exit 1
 fi
 
-# Start log
+# --- Now init logs (only the lock holder reaches here) ---
 echo "<pre>Pipeline started at $(date)</pre>" > "$LOG_FILE"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
@@ -50,7 +50,7 @@ on_exit() {
     log "========================================="
     log "  DEPLOY FAILED"
     log "  Maintenance mode is ACTIVE"
-    log "  Check logs at /logs.html on any domain"
+    log "  Check logs on any domain"
     log "  Fix issue, then remove flag manually:"
     log "    rm -f /tmp/musicsheets-maintenance"
     log "========================================="
