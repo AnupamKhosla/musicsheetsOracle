@@ -72,8 +72,8 @@ app.post('/api/webhook', express.raw({ type: '*/*' }), (req, res) => {
     return res.status(401).send('Invalid signature');
   }
 
-  const payload = JSON.parse(Buffer.isBuffer(req.body) ? req.body.toString() : req.body);
-
+  //const payload = JSON.parse(Buffer.isBuffer(req.body) ? req.body.toString() : req.body);
+  // if we wanan check branch name, we can do it here by looking at payload.ref
   // GitHub ping — acknowledge only, don't deploy
   if (req.headers['x-github-event'] === 'ping') return res.send('pong');
 
