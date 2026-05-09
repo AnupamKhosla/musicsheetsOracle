@@ -71,7 +71,7 @@ log "Installing dependencies"
 npm install
 
 log "Building frontend"
-if ! (cd frontend && npm install && npm run build); then
+if ! (cd frontend && npm install --include=dev && npm run build); then
   log "FATAL: Frontend build failed"
   exit 1
 fi
