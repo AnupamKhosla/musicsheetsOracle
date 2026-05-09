@@ -5,10 +5,6 @@
       "type": "remote",
       "url": "https://mcp.context7.com/mcp"
     },
-    "gh-grep": {
-      "type": "remote",
-      "url": "https://mcp.grep.app"
-    },
     "memory": {
       "type": "local",
       "command": [

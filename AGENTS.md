@@ -97,7 +97,7 @@ When your are openclaw find tools skills agent etc which can cross check outdate
 - **VPS**: Oracle Cloud (IP in local notes), Ubuntu 24.04, 1GB RAM
 - **Stack**: Node.js/Express + React + MongoDB (Atlas or local)
 - **Local folder**: ~/Desktop/Projects/musicsheetsOracle
-- **VPS folder**: /var/www/musicsheets.site
+- **VPS folder**: (configured on VPS)
 - **Process manager**: PM2 (to be configured)
 - **Web server**: Nginx (to be configured)
 - **SSL**: Let's Encrypt via Certbot
