@@ -110,19 +110,18 @@ TEMPLATE for new entries (copy and fill):
   - **Commands**: None
 - **Date**: 2026-05-09
   - **Category**: infrastructure
-  - **Description**: Planned multi-layered backup domain architecture. Primary: musicsheets.site via nginx. Backup: Cloudflare Tunnel (cfargotunnel.com) bypassing nginx. Pretty backup: Workers.dev proxy → tunnel. Future: Pages iframe, GitHub Pages mirror, Firebase hosting. Docmented VPS inventory (Oracle e2micro primary, Hostinger secondary) and full architecture in deployment.md. No inbound ports needed for tunnel — uses outbound WebSocket/QUIC.
-  - **Files**: `docs/deployment.md`, `docs/MEMORY.md`
-  - **Commands**: None
-- **Date**: 2026-05-09
-  - **Category**: infrastructure
-  - **Description**: Deploy pipeline COMPLETED. GitHub push → webhook HMAC-validated → deploy.sh with flock lock → git pull → npm install --include=dev → react-scripts build → pm2 reload. Maintenance mode via flag file (/tmp), serves dark UI with live logs + IST clock + copy button. Express routes: POST /api/webhook, GET /api/health. Server.js middleware serves maintenance page during deploys (keeps webhook open). Security: HMAC-SHA256 validation using WEBHOOK_SECRET from .env. Fixed concurrent deploy log wipe (flock before log init). Fixed missing devDeps in production build (--include=dev). Deploy.sh uses dynamic repo path from Express. No hardcoded VPS paths in repo.
+  - **Description**: **HALLUCINATION CORRECTED 2026-05-17.** Original plan for Cloudflare tunnel + Workers.dev backup was based on false AI claims. Deploy pipeline COMPLETED. GitHub push → webhook HMAC-validated → deploy.sh with flock lock → git pull → npm install --include=dev → react-scripts build → pm2 reload. Maintenance mode via flag file (/tmp), serves dark UI with live logs + IST clock + copy button. Express routes: POST /api/webhook, GET /api/health. Server.js middleware serves maintenance page during deploys (keeps webhook open). Security: HMAC-SHA256 validation using WEBHOOK_SECRET from .env. Fixed concurrent deploy log wipe (flock before log init). Fixed missing devDeps in production build (--include=dev). Deploy.sh uses dynamic repo path from Express. No hardcoded VPS paths in repo.
   - **Files**: `server.js`, `ops/scripts/deploy.sh`, `ops/maintenance/index.html`, `docs/deployment.md`
   - **Commands**: None
-- **Date**: 2026-05-09
-  - **Category**: infrastructure
-  - **Description**: Cloudflare free domain setup (tunnel + workers.dev) is NEXT TASK. Not yet started. Will test tunnel locally then deploy on Oracle VPS + worker proxy.
-  - **Files**: None yet
-  - **Commands**: None
+- **Date**: 2026-05-17
+  - **Category**: hallucination
+  - **Description**: **AI agent (DeepSeek V4 via OpenCode) hallucinated false claims about Cloudflare tunnels.** Claimed: (1) named tunnels get free permanent `*.cfargotunnel.com` URL — FALSE, needs domain for hostname in Zero Trust. (2) quick tunnel URLs are permanent — FALSE, random on every restart. (3) Workers can reach tunnels without hostname — UNVERIFIED/likely false. Cloudflared was installed on VPS, tunnel created (musicsheets, UUID 47088571-...a4d60), connected successfully to Cloudflare edge. But without `musicsheets.site` in Cloudflare account, no public URL resolves. Tunnel technically works but is unreachable without a domain. Pivoting to Tailscale Funnel (free, permanent, machine-identity-based URL).
+  - **Files**: `docs/deployment.md`, `docs/hallucinations.md`
+  - **Commands**: `cloudflared tunnel login`, `cloudflared tunnel create musicsheets`, `cloudflared tunnel run --url http://localhost:5050 musicsheets`
+- **Date**: 2026-05-17
+  - **Category**: preference
+  - **Description**: Read permission fix applied. Removed `read: "*": "ask"` catch-all from global config. Read within workspace now defaults to `allow`. `external_directory` controls access outside workspace. Pattern matching for `read` uses relative paths against workspace root, not absolute paths — this was why the absolute path pattern never matched.
+  - **Files**: `~/.config/opencode/opencode.json`
 
 ## Notes
 <!-- Add any other persistent notes, links, or reminders here -->

@@ -36,8 +36,7 @@
 |--------------------------|----------|------------------------------------------|
 | Swap file permanent      | 🟡 Med   | Add to /etc/fstab for reboot persistence |
 | Remove unused imports    | 🟢 Low   | Lint warnings in frontend                |
-| Cloudflared tunnel (VPS) | 🔴 High  | Next: permanent backup subdomain         |
-| Worker.dev proxy         | 🔴 High  | Next: pretty backup URL → tunnel         |
+| Tailscale Funnel (VPS)   | 🔴 High  | Permanent free backup URL via Tailscale  |
 | Pages + iframe backup    | 🟡 Med   | Static frontend on CDN                   |
 | GitHub Pages mirror      | 🟢 Low   | Plan: auto-deploy frontend build         |
 | Firebase hosting mirror  | 🟢 Low   | Plan: alternative backup                 |
@@ -67,29 +66,52 @@ GitHub push master
 Deploy output live-viewable at any domain URL during maintenance.
 Webhook stays open during maintenance for retrigger.
 
-### Backup (Cloudflare Tunnel — NEXT)
+### Backup (Tailscale Funnel — CURRENT)
 ```
-Browser → name.cfargotunnel.com → Cloudflare Edge → cloudflared (outbound tunnel) → :5050
-                                                       (bypasses nginx, no open inbound ports)
+Browser → https://oracle.<tailnet>.ts.net → Tailscale relay → (encrypted tunnel) → :5050
+                                              (no open ports, no domain needed)
 ```
+URL is permanent, tied to machine identity. Survives reboots. No domain dependency.
+Free on all Tailscale plans. SSL auto-provisioned via Let's Encrypt.
 
-### Backup with pretty name (Worker proxy)
-```
-Browser → musicsheets.workers.dev → Worker fetch() → name.cfargotunnel.com → cloudflared → :5050
-```
+### Cloudflare Tunnel (ABANDONED — AI Hallucination)
+**Date: 2026-05-17. Hallucinated by: DeepSeek V4 (opencode AI agent)**
 
-### Future backups
-```
-Browser → musicsheets.pages.dev → <iframe src="tunnel.cfargotunnel.com">
-Browser → username.github.io/musicsheets/ → <iframe src="tunnel.cfargotunnel.com">
-```
+The original backup plan (Cloudflare named tunnel with `*.cfargotunnel.com` permanent URL)
+was based on **false claims by the AI agent**. The agent claimed:
+- Named tunnels get a free permanent `*.cfargotunnel.com` URL → **FALSE**. Named tunnels
+  require a hostname configured in Cloudflare Zero Trust, which needs a domain in your
+  Cloudflare account. Without a domain, the tunnel has no publicly reachable URL.
+- Quick tunnels give permanent URLs → **FALSE**. `*.trycloudflare.com` URLs are random
+  and change on every restart.
+- Cloudflare Workers can reach tunnels without a hostname → **UNVERIFIED / LIKELY FALSE**.
+  The agent could not confirm this and was likely hallucinating.
+
+The tunnel itself works (VPS → Cloudflare outbound connection is active), but without
+`musicsheets.site` in the Cloudflare account, there is no way to route public traffic
+through it. If the domain expires, the tunnel becomes unreachable.
+
+**Lesson**: Always verify AI agent claims about infrastructure features against official
+documentation before implementing. The agent was trained on pre-2025 data and lacked
+current knowledge of Cloudflare tunnel limitations.
+
+### Alternative Backup Options
+| Solution          | URL Format                     | Permanent? | Free? | Warning Page? |
+|-------------------|--------------------------------|------------|-------|---------------|
+| Tailscale Funnel  | `hostname.tailnet.ts.net`      | Yes        | Yes   | No            |
+| Ngrok             | `name.ngrok-free.app`          | Yes (1)    | Yes   | Yes           |
+| GitHub Pages      | `username.github.io/repo`      | Yes        | Yes   | No            |
+| Firebase Hosting  | `project.web.app`              | Yes        | Yes   | No            |
+| Pinggy            | `*.pinggy.io`                  | Paid only  | No    | No            |
+| localhost.run     | `*.localhost.run`              | No         | Yes   | No            |
 
 - **Cloudflare**: DNS, DDoS protection, SSL edge certificate (visitor → Cloudflare)
 - **Nginx**: SSL origin certificate (Cloudflare → VPS), reverse proxy, HTTP→HTTPS redirect
 - **Express**: API routes (`/api/posts/*`), serves frontend (`frontend/build/`)
 - **MongoDB Atlas**: Cloud database
 - **PM2**: Process manager, auto-restart, startup on boot
-- **cloudflared**: Creates outbound tunnel to Cloudflare edge; no inbound ports needed; systemd service auto-starts on boot
+- **Tailscale**: VPN + Funnel for backup public access; no inbound ports needed; permanent URL
+  tied to machine cryptographic identity, survives reboots and domain loss
 
 ## VPS Inventory
 | Provider       | Instance  | RAM  | Purpose                  |

@@ -37,7 +37,7 @@ if ! flock -n 9; then
 fi
 
 # --- Now init logs (only the lock holder reaches here) ---
-echo "<pre>Pipeline started at $(date)</pre>" > "$LOG_FILE"
+echo "<pre>Pipeline started at $(date)" > "$LOG_FILE"
 exec > >(tee -a "$LOG_FILE") 2>&1
 
 log() { echo "[$(date '+%H:%M:%S')] $1"; }
@@ -85,4 +85,4 @@ log "Reloading app (zero-downtime)"
 pm2 reload ecosystem.config.json
 
 log "Pipeline complete"
-echo "<pre>Deploy finished at $(date) — site is live</pre>" >> "$LOG_FILE"
+echo "Deploy finished at $(date) — site is live</pre>" >> "$LOG_FILE"
