@@ -15,6 +15,8 @@
 | SSL (Let's Encrypt)      | ✅ Done  | Certbot auto-renewal, HTTP→HTTPS redirect |
 | DNS A record             | ✅ Done  | Cloudflare DNS A record points to VPS IP |
 | Cloudflare SSL           | ✅ Done  | Full (Strict) mode with origin cert validation |
+| Tailscale Funnel (VPS)  | ✅ Done  | Backup URL: `musicsheets.tail0c6a25.ts.net`, hidden IP, survives reboots |
+| Swap file permanent      | ✅ Done  | `/swapfile 4G` in `/etc/fstab`                 |
 
 ## Application
 
@@ -25,7 +27,7 @@
 | Frontend build             | ✅ Done | Built with swap file, served by Express         |
 | .env (MongoDB URI)         | ✅ Done | Created on VPS via `cat > .env`                 |
 | Express serves static      | ✅ Done | `express.static(frontend/build)` on port 5050   |
-| PM2 auto-start             | ✅ Done | `pm2 save` + `pm2 startup`                     |
+| PM2 auto-start             | ✅ Done | `pm2 save` + `pm2 startup` (ubuntu user, not root) |
 | Webhook auto-deploy        | ✅ Done | GitHub push → /api/webhook → deploy.sh → PM2 reload |
 | Maintenance mode           | ✅ Done | Flag-file based; dark UI with live logs + IST clock |
 | Pipeline lock              | ✅ Done | flock-based; prevents concurrent deploys        |
@@ -34,9 +36,7 @@
 
 | Item                     | Priority | Notes                                    |
 |--------------------------|----------|------------------------------------------|
-| Swap file permanent      | 🟡 Med   | Add to /etc/fstab for reboot persistence |
 | Remove unused imports    | 🟢 Low   | Lint warnings in frontend                |
-| Tailscale Funnel (VPS)   | 🔴 High  | Permanent free backup URL via Tailscale  |
 | Pages + iframe backup    | 🟡 Med   | Static frontend on CDN                   |
 | GitHub Pages mirror      | 🟢 Low   | Plan: auto-deploy frontend build         |
 | Firebase hosting mirror  | 🟢 Low   | Plan: alternative backup                 |
@@ -66,13 +66,15 @@ GitHub push master
 Deploy output live-viewable at any domain URL during maintenance.
 Webhook stays open during maintenance for retrigger.
 
-### Backup (Tailscale Funnel — CURRENT)
+### Backup (Tailscale Funnel — ✅ DONE)
 ```
-Browser → https://oracle.<tailnet>.ts.net → Tailscale relay → (encrypted tunnel) → :5050
-                                              (no open ports, no domain needed)
+Browser → https://musicsheets.tail0c6a25.ts.net → Tailscale relay → (tunnel) → :5050
+                                                    (no open ports, IP hidden)
 ```
 URL is permanent, tied to machine identity. Survives reboots. No domain dependency.
 Free on all Tailscale plans. SSL auto-provisioned via Let's Encrypt.
+PM2 FIX: Must run `pm2 startup` as ubuntu user (not root) — root service created by
+`sudo pm2 startup` looks in `/root/.pm2/` while `pm2 save` writes to `/home/ubuntu/.pm2/`.
 
 ### Cloudflare Tunnel (ABANDONED — AI Hallucination)
 **Date: 2026-05-17. Hallucinated by: DeepSeek V4 (opencode AI agent)**

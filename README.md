@@ -1,127 +1,38 @@
-## About  
+**`https://musicsheets.site`**  
+**`https://musicsheets.tail0c6a25.ts.net`** *(backup/mirror)*
 
-This website/project intends to collect all Indian ragas music sheet in one place like a wiki. The website/project is currently in development phase. 
+---
 
+# Music Sheets Oracle
 
+An open-source, community-driven wiki to archive and share Indian raga music sheets — all in one place.
 
-## Commands
+**Mission**: Preserve and freely share Indian classical music notations. This is a non-commercial open-source project.
+
+Currently focused on **Indian classical music (Hindustani + Carnatic ragas)**. Expanding to other genres over time.
+
+### We Need Help
+
+We are looking for support in several areas:
+
+- **Hosting & domain costs** — This is run on free-tier infra where possible, but any sponsorship for hosting or domain renewal helps keep it running.
+- **Music sheet collections** — If you have a collection of digital or scanned music sheets, we want to archive them here.
+- **Musicians & teachers** — Suggest features, correct notations, guide the transcription style. We want this to reflect how music is actually taught and practiced.
+- **Bhatkande notation** — We need to add support for the Bhatkande notation system alongside the current format.
+- **Sheet music player** — Looking for a web-based playback plugin that can render and play Indian music sheet notation in the browser (open-source or paid — recommendations welcome).
+
+We welcome contributors — whether you want to add sheets, fix bugs, or help with infrastructure. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Quick Commands
 
 ```
-kill port on linux:        kill -9 $(lsof -t -i:8080)
-test app:                  npm test
-start development work:    npm run start_dev
-start prod env:            npm start
+start development:   npm run start_dev
+run production:      npm start
+run tests:           npm test
 ```
 
-Use only `localhost:3000` for development work. `localhost:5050`  for production testing. `npm test` will create the build folder and run the tests. 
+Use `localhost:3000` for frontend dev, `localhost:5050` for backend/prod testing.
 
+---
 
-
-Welcome to the musicsheets.in project
-==================================================
-
-This project builds upon https://github.com/mongodb-developer/mongodb-express-rest-api-example it is currenlty hosted on amazon web services beanstalk environment. The current code is compatibe with aws linux 2. 
-
-A few things have changed with newer node and mongodb versions, so this project imporoves upon the former MERN git repo.
-
-
-
-
---------------------------------
-
-
-This sample code helps get you started with a simple Express web application
-deployed by AWS Elastic Beanstalk and AWS CloudFormation.
-
-What's Here
------------
-
-This sample includes:
-
-* README.md - this file
-* .ebextensions/ - this directory contains the configuration files that
-  AWS Elastic Beanstalk will deploy your Express application
-* buildspec.yml - this file is used by AWS CodeBuild to package your project.
-* package.json - this file contains various metadata relevant to your Node.js
-  application such as dependencies
-* server.js - this file contains the code for your application
-* public/ - this directory contains static web assets used by your application
-* tests/ - this directory contains unit tests for your application
-* template.yml - this file contains the description of AWS resources used by AWS
-  CloudFormation to deploy your infrastructure
-* template-configuration.json - this file contains the project ARN with placeholders used for tagging resources with the project ID  
-
-
-Getting Started
----------------
-
-These directions assume you want to develop on your local computer, and not
-from the Amazon EC2 instance itself. If you're on the Amazon EC2 instance, the
-virtual environment is already set up for you, and you can start working on the
-code.
-
-To work on the sample code, you'll need to clone your project's repository to your
-local computer. If you haven't, do that first. You can find instructions in the AWS CodeStar user guide at https://docs.aws.amazon.com/codestar/latest/userguide/getting-started.html#clone-repo.
-
-1. Install Node.js on your computer.  For details on available installers visit
-   https://nodejs.org/en/download/.
-
-2. Install NPM dependencies:
-
-        $ npm install
-
-3. Start the development server:
-
-        $ node server.js
-
-4. Open http://127.0.0.1:3000/ in a web browser to view your application.
-
-What Do I Do Next?
-------------------
-
-Once you have a virtual environment running, you can start making changes to
-the sample Express web application. We suggest making a small change to
-/public/index.html first, so you can see how changes pushed to your project's
-repository are automatically picked up and deployed to the Amazon EC2 instance
-by AWS Elastic Beanstalk. (You can watch the progress on your project dashboard.)
-Once you've seen how that works, start developing your own code, and have fun!
-
-To run your tests locally, go to the root directory of the
-sample code and run the `npm test` command, which
-AWS CodeBuild also runs through your `buildspec.yml` file.
-
-To test your new code during the release process, modify the existing tests or
-add tests to the tests directory. AWS CodeBuild will run the tests during the
-build stage of your project pipeline. You can find the test results
-in the AWS CodeBuild console.
-
-Learn more about AWS CodeBuild and how it builds and tests your application here:
-https://docs.aws.amazon.com/codebuild/latest/userguide/concepts.html
-
-Learn more about AWS CodeStar by reading the user guide.  Ask questions or make
-suggestions on our forum.
-
-User Guide: https://docs.aws.amazon.com/codestar/latest/userguide/welcome.html
-
-Forum: https://forums.aws.amazon.com/forum.jspa?forumID=248
-
-How Do I Add Template Resources to My Project?
-------------------
-
-To add AWS resources to your project, you'll need to edit the `template.yml`
-file in your project's repository. You may also need to modify permissions for
-your project's worker roles. After you push the template change, AWS CodeStar
-and AWS CloudFormation provision the resources for you.
-
-See the AWS CodeStar user guide for instructions to modify your template:
-https://docs.aws.amazon.com/codestar/latest/userguide/how-to-change-project.html#customize-project-template
-
-What Should I Do Before Running My Project in Production?
-------------------
-
-AWS recommends you review the security best practices recommended by the framework
-author of your selected sample application before running it in production. You
-should also regularly review and apply any available patches or associated security
-advisories for dependencies used within your application.
-
-Best Practices: https://docs.aws.amazon.com/codestar/latest/userguide/best-practices.html?icmpid=docs_acs_rm_sec
+*For developers and contributors → [CONTRIBUTING.md](CONTRIBUTING.md)*

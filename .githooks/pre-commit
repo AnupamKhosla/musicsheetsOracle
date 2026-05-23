@@ -1,0 +1,2 @@
+#!/bin/bash
+gitleaks protect --staged --exit-code 1

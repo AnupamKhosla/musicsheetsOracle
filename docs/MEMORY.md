@@ -11,9 +11,9 @@ This file serves as persistent memory across OpenCode chat sessions. Since the A
 ## Project State
 
 ### Current Status
-- **Last Updated**: 2026-05-09
+- **Last Updated**: 2026-05-23
 - **Active Branches**: master
-- **Current Focus**: Pipeline COMPLETED. Next: Cloudflare free domain backup (tunnel + workers.dev).
+- **Current Focus**: Tailscale Funnel COMPLETED. All services survive reboot. Next: rate limiting (express-rate-limit), Pages + iframe backup.
 
 ### Recent Decisions
 - Using PM2 for process management
@@ -122,6 +122,11 @@ TEMPLATE for new entries (copy and fill):
   - **Category**: preference
   - **Description**: Read permission fix applied. Removed `read: "*": "ask"` catch-all from global config. Read within workspace now defaults to `allow`. `external_directory` controls access outside workspace. Pattern matching for `read` uses relative paths against workspace root, not absolute paths — this was why the absolute path pattern never matched.
   - **Files**: `~/.config/opencode/opencode.json`
+- **Date**: 2026-05-23
+  - **Category**: infrastructure
+  - **Description**: Tailscale Funnel configured and tested end-to-end on VPS. Backup URL: `https://musicsheets.tail0c6a25.ts.net`. PM2 startup fixed (created as ubuntu user, not root — root service looks in `/root/.pm2/` but `pm2 save` writes to `/home/ubuntu/.pm2/`). Swap persistence fixed (added to `/etc/fstab`). Pre-commit gitleaks hook set up. README rewritten for non-technical audience. CONTRIBUTING.md created with full VPS setup/migration guide. docs/deployment.md updated.
+  - **Files**: `README.md`, `CONTRIBUTING.md`, `docs/deployment.md`, `docs/MEMORY.md`, `.githooks/pre-commit`, `ecosystem.config.json`
+  - **Commands**: `tailscale funnel --bg 5050`, `pm2 start ecosystem.config.json`, `pm2 save`, `pm2 startup`, `echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab`, `brew install gitleaks`, `git config core.hooksPath .githooks`
 
 ## Notes
 <!-- Add any other persistent notes, links, or reminders here -->
