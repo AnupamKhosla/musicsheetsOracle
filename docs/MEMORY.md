@@ -13,7 +13,7 @@ This file serves as persistent memory across OpenCode chat sessions. Since the A
 ### Current Status
 - **Last Updated**: 2026-05-23
 - **Active Branches**: master
-- **Current Focus**: Tailscale Funnel COMPLETED. All services survive reboot. Next: rate limiting (express-rate-limit), Pages + iframe backup.
+- **Current Focus**: Tailscale Funnel COMPLETED. Funnel moved through Nginx (port 8080). All services survive reboot. Next: Nginx rate limiting (`limit_req_zone`), `express-rate-limit` for per-route control, Pages + iframe backup.
 
 ### Recent Decisions
 - Using PM2 for process management
@@ -124,9 +124,16 @@ TEMPLATE for new entries (copy and fill):
   - **Files**: `~/.config/opencode/opencode.json`
 - **Date**: 2026-05-23
   - **Category**: infrastructure
-  - **Description**: Tailscale Funnel configured and tested end-to-end on VPS. Backup URL: `https://musicsheets.tail0c6a25.ts.net`. PM2 startup fixed (created as ubuntu user, not root — root service looks in `/root/.pm2/` but `pm2 save` writes to `/home/ubuntu/.pm2/`). Swap persistence fixed (added to `/etc/fstab`). Pre-commit gitleaks hook set up. README rewritten for non-technical audience. CONTRIBUTING.md created with full VPS setup/migration guide. docs/deployment.md updated.
+  - **Description**: Tailscale Funnel fully configured and tested. Backup URL: `https://musicsheets.tail0c6a25.ts.net`. Funnel moved through Nginx: added `listen 127.0.0.1:8080` + `musicsheets.tail0c6a25.ts.net` to existing Nginx config, so funnel traffic gets Nginx rate limiting (planned). Tailscale CLI v1.52 syntax change noted: new format `tailscale funnel --https=443 <target> [off]` instead of positional args. 
+    PM2 startup fixed: `sudo pm2 startup` was creating root service (`pm2-root.service` reading `/root/.pm2/`) but `pm2 save` writes to `/home/ubuntu/.pm2/`. Re-run `pm2 startup` as ubuntu user (no sudo) to match. 
+    Cert files in `/home/ubuntu/` deleted (local copies of funnel cert, not needed). 
+    README.md rewritten for non-technical audience: open-source music sheets project, seeking contributors for sheets, Bhatkande notation system, sheet music player plugin, hosting support. CONTRIBUTING.md created with full VPS setup/migration guide (no secrets). 
+    Pre-commit hook: `.githooks/pre-commit` with gitleaks, `core.hooksPath` set. 
+    Rate limiting NOT yet implemented (planned: Nginx `limit_req_zone` + Express `express-rate-limit`).
   - **Files**: `README.md`, `CONTRIBUTING.md`, `docs/deployment.md`, `docs/MEMORY.md`, `.githooks/pre-commit`, `ecosystem.config.json`
-  - **Commands**: `tailscale funnel --bg 5050`, `pm2 start ecosystem.config.json`, `pm2 save`, `pm2 startup`, `echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab`, `brew install gitleaks`, `git config core.hooksPath .githooks`
+  - **VPS files changed**: `/etc/nginx/sites-available/musicsheets.site`
+  - **Commands**: `tailscale funnel --https=443 localhost:5050 off`, `tailscale funnel --bg --https=443 localhost:8080`, `pm2 startup`, `pm2 start ecosystem.config.json`, `pm2 save`, `brew install gitleaks`, `git config core.hooksPath .githooks`
+  - **Key lesson**: Tailscale funnel CLI changed in v1.52. Always use `--https=443 <target>` syntax. Funnel only allows public ports 443/8443/10000. Old syntax (`tailscale funnel 5050`) deprecated.
 
 ## Notes
 <!-- Add any other persistent notes, links, or reminders here -->

@@ -37,6 +37,8 @@
 | Item                     | Priority | Notes                                    |
 |--------------------------|----------|------------------------------------------|
 | Remove unused imports    | 🟢 Low   | Lint warnings in frontend                |
+| Nginx rate limiting      | 🟡 Med   | `limit_req_zone` + `limit_req` — measure traffic first via dry_run mode |
+| Express rate limiting    | 🟡 Med   | `express-rate-limit` for per-route, login, API auth |
 | Pages + iframe backup    | 🟡 Med   | Static frontend on CDN                   |
 | GitHub Pages mirror      | 🟢 Low   | Plan: auto-deploy frontend build         |
 | Firebase hosting mirror  | 🟢 Low   | Plan: alternative backup                 |
@@ -68,13 +70,19 @@ Webhook stays open during maintenance for retrigger.
 
 ### Backup (Tailscale Funnel — ✅ DONE)
 ```
-Browser → https://musicsheets.tail0c6a25.ts.net → Tailscale relay → (tunnel) → :5050
+Browser → https://musicsheets.tail0c6a25.ts.net → Tailscale relay → (tunnel) → :8080
                                                     (no open ports, IP hidden)
+                                                      ↓
+                                               Nginx → :5050 → Express
 ```
-URL is permanent, tied to machine identity. Survives reboots. No domain dependency.
+Funnel now goes through Nginx (port 8080) instead of Express directly, so all traffic
+(primary + backup) shares the same Nginx `proxy_pass` and future rate limiting rules.
+URL is permanent, tied to machine identity. Survives reboots via `--bg` flag.
 Free on all Tailscale plans. SSL auto-provisioned via Let's Encrypt.
 PM2 FIX: Must run `pm2 startup` as ubuntu user (not root) — root service created by
 `sudo pm2 startup` looks in `/root/.pm2/` while `pm2 save` writes to `/home/ubuntu/.pm2/`.
+Tailscale CLI changed in v1.52 — use `--https=443 <target>` syntax, old positional
+args deprecated. Funnel only allows public ports 443, 8443, or 10000.
 
 ### Cloudflare Tunnel (ABANDONED — AI Hallucination)
 **Date: 2026-05-17. Hallucinated by: DeepSeek V4 (opencode AI agent)**
