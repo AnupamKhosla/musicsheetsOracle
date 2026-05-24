@@ -1,5 +1,7 @@
 **`https://musicsheets.site`**  
-**`https://musicsheets.tail0c6a25.ts.net`** *(backup/mirror)*
+**`https://musicsheets.tail0c6a25.ts.net`** *(backup/mirror)*  
+**`https://musicsheets.onrender.com`** *(backup/mirror)*  
+**`https://musicsheets.vercel.app`** *(Vercel — currently not working)*
 
 ---
 
