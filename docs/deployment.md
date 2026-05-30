@@ -12,6 +12,9 @@
 | MongoDB Atlas            | ✅ Done | VPS IP/32 whitelisted (see local notes)  |
 | OCI Firewall (port 5050) | ✅ Done | Ingress rule for TCP/5050                |
 | Nginx reverse proxy      | ✅ Done  | Route port 80/443 → 5050, welcome page on IP |
+| Nginx rate limiting       | ✅ Done  | Two zones: static 100r/s, dynamic 50r/s; Cloudflare real IP |
+| Nginx gzip                | ✅ Done  | Template in `ops/nginx/`, gzip_static + 2x types; `sudo nginx -t && sudo systemctl reload nginx` on VPS |
+| Build-time gzip (gzipper) | ✅ Done  | Pre-compresses static files at build time, nginx serves .gz directly |
 | SSL (Let's Encrypt)      | ✅ Done  | Certbot auto-renewal, HTTP→HTTPS redirect |
 | DNS A record             | ✅ Done  | Cloudflare DNS A record points to VPS IP |
 | Cloudflare SSL           | ✅ Done  | Full (Strict) mode with origin cert validation |
@@ -37,7 +40,6 @@
 | Item                     | Priority | Notes                                    |
 |--------------------------|----------|------------------------------------------|
 | Remove unused imports    | 🟢 Low   | Lint warnings in frontend                |
-| Nginx rate limiting      | 🟡 Med   | `limit_req_zone` + `limit_req` — measure traffic first via dry_run mode |
 | Express rate limiting    | 🟡 Med   | `express-rate-limit` for per-route, login, API auth |
 | Pages + iframe backup    | 🟡 Med   | Static frontend on CDN                   |
 | GitHub Pages mirror      | 🟢 Low   | Plan: auto-deploy frontend build         |
@@ -131,5 +133,5 @@ current knowledge of Cloudflare tunnel limitations.
 | (others TBD)   |           |      |                          |
 
 ## Notes
-- Nginx config and SSL certificates live on the VPS (not in this repo)
-- VPS paths, IP addresses, and server configs are kept in local notes only
+- Nginx site config is versioned at `ops/nginx/musicsheets.site.conf` (sanitized, no secrets)
+- SSL certificates live on the VPS only (managed by Certbot)
