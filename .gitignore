@@ -9,3 +9,5 @@ frontend/build/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
 .DS_Store
+.next
+.commandcode

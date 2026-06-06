@@ -1,26 +1,33 @@
 {
-    "name": "express-HelloWorld",
-    "description": "Hello World Node Express web application",
-    "version": "0.0.1",
-    "type": "module",
-    "private": true,
-    "dependencies": {
-        "cors": "^2.8.5",
-        "dotenv": "^16.3.1",
-        "express": "4.18.2",
-        "express-async-errors": "^3.1.1",
-        "mongodb": "^5.7.0",
-        "nodemon": "^3.0.1"
-    },
-    "devDependencies": {
-        "concurrently": "^8.2.0",
-        "mocha": "^10.2.0",
-        "supertest": "^6.3.3",
-        "unit.js": "^2.1.1"
-    },
-    "scripts": {
-        "start": "node server.js",
-        "start_dev": "concurrently 'node --watch server.js' 'cd frontend/src && npm start'",
-        "test": "mocha --recursive tests --exit && cd frontend/src && npm install && npm run build && cd ../"
-    }
+  "name": "musicsheets",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@iconscout/unicons": "^4.0.8",
+    "autoprefixer": "^10.5.0",
+    "dotenv": "^16.3.1",
+    "js-beautify": "^1.15.4",
+    "mongodb": "^5.7.0",
+    "next": "^16.2.0",
+    "opensheetmusicdisplay": "^1.8.2",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-paginate": "^8.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.3",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "sass": "^1.65.1",
+    "tailwindcss": "^3.3.3",
+    "typescript": "^5.7.0"
+  }
 }

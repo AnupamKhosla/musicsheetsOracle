@@ -1,0 +1,19 @@
+import type { NextRequest } from 'next/server';
+import { html as beautify } from 'js-beautify';
+
+export function proxy(request: NextRequest) {
+  if (process.env.NODE_ENV !== 'development') return;
+  if (request.headers.get('x-pretty-html-pass')) return;
+
+  const url = new URL(request.url);
+  return fetch(url.toString(), {
+    headers: { ...request.headers, 'x-pretty-html-pass': '1' },
+    redirect: 'follow',
+  }).then(async res => {
+    const text = await res.text();
+    const pretty = beautify(text, { indent_size: 2, preserve_newlines: true, max_preserve_newlines: 1 });
+    return new Response(pretty, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+  });
+}
+
+export const matcher = /^\/((?!_next|api|favicon\.ico).*)/;
