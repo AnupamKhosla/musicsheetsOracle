@@ -2,10 +2,17 @@ import React, {useState, useEffect, useRef} from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { baseUrl } from "../config";
 import OpenSheetMusicDisplay from "../components/OpenSheetMusicDisplay";
+import IndianNotation from "../components/IndianNotation";
+
+const TABS = [
+  { key: 'western', label: 'Western Staff' },
+  { key: 'indian', label: 'Indian Bhatkhande' },
+];
 
 export default function App() {
   let params = useParams();
   let [post, setPost] = useState({});
+  let [notation, setNotation] = useState('western');
   let [showModal, setShowModal] = useState(false);
   let [author, setAuthor] = useState("");
   let [body, setBody] = useState("");
@@ -71,8 +78,54 @@ export default function App() {
       </div>
    
       <section className="relative">
-        <div className="container relative min-h-[40rem]">   
-          { post.sheetName && <OpenSheetMusicDisplay file={"/sheets/" + post.sheetName + ".xml"} /> }
+        <div className="container relative">
+          {/* Notation toggle tabs */}
+          <div className="notation-tabs mt-6">
+            {TABS.map(tab => (
+              <button
+                key={tab.key}
+                className={`notation-tab ${notation === tab.key ? 'active' : ''}`}
+                onClick={() => setNotation(tab.key)}
+              >
+                {tab.key === 'western' ? (
+                  <span>
+                    <svg className="tab-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <line x1="2" y1="4" x2="14" y2="4" stroke="currentColor" strokeWidth="0.5"/>
+                      <line x1="2" y1="6" x2="14" y2="6" stroke="currentColor" strokeWidth="0.5"/>
+                      <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="0.5"/>
+                      <line x1="2" y1="10" x2="14" y2="10" stroke="currentColor" strokeWidth="0.5"/>
+                      <line x1="2" y1="12" x2="14" y2="12" stroke="currentColor" strokeWidth="0.5"/>
+                      <ellipse cx="5" cy="6" rx="1.2" ry="0.9" fill="currentColor" transform="rotate(-15 5 6)"/>
+                    </svg>
+                    <span className="tab-label">{tab.label}</span>
+                  </span>
+                ) : (
+                  <span>
+                    <svg className="tab-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <text x="1" y="13" fontSize="14" fill="currentColor" fontFamily="Noto Sans Devanagari, sans-serif">स</text>
+                    </svg>
+                    <span className="tab-label">{tab.label}</span>
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* Western Staff */}
+          {notation === 'western' && (
+            <div className="min-h-[40rem]">
+              {post.sheetName && <OpenSheetMusicDisplay file={"/sheets/" + post.sheetName + ".xml"} />}
+            </div>
+          )}
+
+          {/* Indian Bhatkhande */}
+          {notation === 'indian' && (
+            <div className="min-h-[40rem]">
+              {post.sheetName && (
+                <IndianNotation fileUrl={"/sheets/" + post.sheetName + ".xml"} />
+              )}
+            </div>
+          )}
         </div>           
       </section>
 
