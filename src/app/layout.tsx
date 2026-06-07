@@ -22,7 +22,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   if (maintenance) {
     return (
       <html lang="en">
-        <head />
         <body>
           <MaintenancePage />
         </body>
@@ -32,7 +31,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="en">
-      <head />
       <body>
         <div className="app-container bg-slate-100 min-h-screen">
           <Navigation />

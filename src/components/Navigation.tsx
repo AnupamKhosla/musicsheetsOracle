@@ -79,7 +79,7 @@ export default function Navigation() {
 
   return (
     <nav id="topnav" className="defaultscroll is-sticky">
-      <div className="container relative">
+      <div className="container relative nav-container">
         <Link className="logo" href="/">
           <span className="h1">
             {' '}
@@ -136,7 +136,7 @@ export default function Navigation() {
               <Link className="sub-menu-item" href="/">Home</Link>
             </li>
             <li className="has-submenu parent-parent-menu-item">
-              <a href="#">Ragas</a><span className="menu-arrow"></span>
+              <a href="#">Ragas</a> <span className="menu-arrow"></span>
               <ul className="submenu megamenu">
                 {RAGA_COLUMNS}
               </ul>
