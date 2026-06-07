@@ -4,7 +4,7 @@
 #topnav {
     @apply static start-0 end-0 top-0 z-999 bg-transparent border-0 transition-all duration-500 ease-in-out;
     .nav-container {
-      display: flex;
+      // display: flex;
     }
     .logo {
         @apply ltr:float-left rtl:float-right text-black dark:text-white #{!important};
