@@ -1,137 +1,95 @@
 # Deployment Status
 
-**Domain**: musicsheets.site  
-**VPS**: Oracle Cloud (IP in local notes), Ubuntu 24.04, 1GB RAM  
+**Domain**: musicsheets.site
+**VPS**: Oracle Cloud (IP in local notes), Ubuntu 24.04, 1GB RAM
+**Stack**: Next.js 16.2 + React 19.2 + MongoDB Atlas
 
 ## Infrastructure
 
-| Item                     | Status  | Notes                                    |
-|--------------------------|---------|------------------------------------------|
-| Node.js (v24.15.0)       | ✅ Done | Via NodeSource setup_24.x                |
-| PM2 (v7.x)               | ✅ Done | Ecosystem config: ecosystem.config.json  |
-| MongoDB Atlas            | ✅ Done | VPS IP/32 whitelisted (see local notes)  |
-| OCI Firewall (port 5050) | ✅ Done | Ingress rule for TCP/5050                |
-| Nginx reverse proxy      | ✅ Done  | Route port 80/443 → 5050, welcome page on IP |
-| Nginx rate limiting       | ✅ Done  | Two zones: static 100r/s, dynamic 50r/s; Cloudflare real IP |
-| Nginx gzip                | ✅ Done  | Template in `ops/nginx/`, gzip_static + 2x types; `sudo nginx -t && sudo systemctl reload nginx` on VPS |
-| Build-time gzip (gzipper) | ✅ Done  | Pre-compresses static files at build time, nginx serves .gz directly |
-| SSL (Let's Encrypt)      | ✅ Done  | Certbot auto-renewal, HTTP→HTTPS redirect |
-| DNS A record             | ✅ Done  | Cloudflare DNS A record points to VPS IP |
-| Cloudflare SSL           | ✅ Done  | Full (Strict) mode with origin cert validation |
-| Tailscale Funnel (VPS)  | ✅ Done  | Backup URL: `musicsheets.tail0c6a25.ts.net`, hidden IP, survives reboots |
-| Swap file permanent      | ✅ Done  | `/swapfile 4G` in `/etc/fstab`                 |
+| Item                     | Status  | Notes |
+|--------------------------|---------|-------|
+| Node.js (v24.15.0)       | ✅ Done | Via NodeSource setup_24.x |
+| PM2 (v7.x)               | ✅ Done | Ecosystem config: `ecosystem.config.json` |
+| MongoDB Atlas            | ✅ Done | VPS IP/32 whitelisted |
+| OCI Firewall (port 5050) | ✅ Done | Ingress rule for TCP/5050 |
+| Nginx reverse proxy      | ✅ Done | Route 80/443 → 5050, welcome page on IP |
+| Nginx rate limiting      | ✅ Done | Two zones: static 100r/s, dynamic 50r/s; Cloudflare real IP |
+| Nginx gzip               | ✅ Done | Template in `ops/nginx/`, gzip_static + 2x types |
+| Build-time gzip          | ⚠️ Removed | gzipper removed (Next.js has built-in compression) |
+| SSL (Let's Encrypt)      | ✅ Done | Certbot auto-renewal, HTTP→HTTPS redirect |
+| DNS A record             | ✅ Done | Cloudflare DNS |
+| Cloudflare SSL           | ✅ Done | Full (Strict) mode |
+| Tailscale Funnel         | ✅ Done | Backup: `musicsheets.tail0c6a25.ts.net` |
+| Swap file                | ✅ Done | `/swapfile 4G` in `/etc/fstab` |
 
 ## Application
 
-| Item                       | Status  | Notes                                          |
-|----------------------------|---------|-------------------------------------------------|
-| API routes prefix          | ✅ Done | Moved to `/api/posts` from `/posts`             |
-| Dynamic baseUrl            | ✅ Done | Runtime detection via `window.location.hostname`|
-| Frontend build             | ✅ Done | Built with swap file, served by Express         |
-| .env (MongoDB URI)         | ✅ Done | Created on VPS via `cat > .env`                 |
-| Express serves static      | ✅ Done | `express.static(frontend/build)` on port 5050   |
-| PM2 auto-start             | ✅ Done | `pm2 save` + `pm2 startup` (ubuntu user, not root) |
-| Webhook auto-deploy        | ✅ Done | GitHub push → /api/webhook → deploy.sh → PM2 reload |
-| Maintenance mode           | ✅ Done | Flag-file based; dark UI with live logs + IST clock |
-| Pipeline lock              | ✅ Done | flock-based; prevents concurrent deploys        |
+| Item                       | Status  | Notes |
+|----------------------------|---------|-------|
+| Next.js 16.2 + React 19.2  | ✅ Done | Migrated from CRA+Express |
+| API routes                 | ✅ Done | `src/app/api/posts/*` (GET/POST/DELETE, search, count, latest) |
+| Webhook (auto-deploy)      | ✅ Done | `src/app/api/webhook/route.ts` |
+| Health check               | ✅ Done | `src/app/api/health/route.ts` |
+| Pipeline logs endpoint     | ✅ Done | `src/app/api/logs/route.ts` |
+| Maintenance mode           | ✅ Done | `MAINTENANCE` flag file + `MaintenancePage` component |
+| Platform detection         | ✅ Done | `src/lib/platform.ts` — runtime VPS vs Vercel/Edge detection |
+| PM2 auto-start             | ✅ Done | `pm2 save` + `pm2 startup` |
 
 ## Pending
 
-| Item                     | Priority | Notes                                    |
-|--------------------------|----------|------------------------------------------|
-| Remove unused imports    | 🟢 Low   | Lint warnings in frontend                |
-| Express rate limiting    | 🟡 Med   | `express-rate-limit` for per-route, login, API auth |
-| Pages + iframe backup    | 🟡 Med   | Static frontend on CDN                   |
-| GitHub Pages mirror      | 🟢 Low   | Plan: auto-deploy frontend build         |
-| Firebase hosting mirror  | 🟢 Low   | Plan: alternative backup                 |
+| Item                     | Priority | Notes |
+|--------------------------|----------|-------|
+| Rate limiting (app-level)| 🟡 Med   | `express-rate-limit` no longer applies; consider Next.js middleware or Nginx |
+| Pages + iframe backup    | 🟡 Med   | Static frontend on CDN |
+| GitHub Pages mirror      | 🟢 Low   | |
+| Firebase hosting mirror  | 🟢 Low   | |
 
 ## Architecture
 
 ### Primary (current)
 ```
-Browser → musicsheets.site → Cloudflare DNS → VPS:443 → Nginx → :5050 → Express → MongoDB Atlas
+Browser → musicsheets.site → Cloudflare DNS → VPS:443 → Nginx → :5050 → Next.js → MongoDB Atlas
 ```
+
+Next.js handles everything: pages, API routes, static files — all in one process.
+No Express, no separate frontend build step.
 
 ### Pipeline (CI/CD)
 ```
 GitHub push master
   → webhook POST to musicsheets.site/api/webhook
-  → Express HMAC-validates → spawns deploy.sh
+  → HMAC-validated → spawns deploy.sh
   → deploy.sh:
-      1. flock lock check (prevents concurrent runs)
-      2. touch /tmp/musicsheets-maintenance → Express serves maintenance UI
+      1. flock lock (ops/deploy-lock)
+      2. echo "1" > MAINTENANCE → layout.tsx serves MaintenancePage
       3. git pull --ff-only origin master
-      4. npm install (root)
-      5. cd frontend && npm install --include=dev && npm run build
-      6. Build FAILS: maintenance stays ON, logs visible → SSH to fix
-      7. Build OK: rm flag, pm2 reload, lock released
+      4. npm install --include=dev
+      5. npx next build
+      6. Build FAILS: MAINTENANCE stays "1", logs visible → SSH to fix
+      7. Build OK: echo "0" > MAINTENANCE, pm2 reload
 ```
 
-Deploy output live-viewable at any domain URL during maintenance.
-Webhook stays open during maintenance for retrigger.
+All pipeline state lives in repo:
+- `MAINTENANCE` — flag file (committed, default "0")
+- `ops/deploy-lock` — flock lock (gitignored)
+- `ops/deploy-logs.html` — live logs (gitignored)
 
-### Backup (Tailscale Funnel — ✅ DONE)
+The webhook only activates on bare VPS (detected via `isManagedPlatform()`).
+On Vercel/Cloudflare Pages/etc., the webhook returns 404 — those platforms have their own CI/CD.
+
+### Backup (Tailscale Funnel)
 ```
-Browser → https://musicsheets.tail0c6a25.ts.net → Tailscale relay → (tunnel) → :8080
-                                                    (no open ports, IP hidden)
-                                                      ↓
-                                               Nginx → :5050 → Express
+Browser → musicsheets.tail0c6a25.ts.net → Tailscale relay → :8080 → Nginx → :5050 → Next.js
 ```
-Funnel now goes through Nginx (port 8080) instead of Express directly, so all traffic
-(primary + backup) shares the same Nginx `proxy_pass` and future rate limiting rules.
-URL is permanent, tied to machine identity. Survives reboots via `--bg` flag.
-Free on all Tailscale plans. SSL auto-provisioned via Let's Encrypt.
-PM2 FIX: Must run `pm2 startup` as ubuntu user (not root) — root service created by
-`sudo pm2 startup` looks in `/root/.pm2/` while `pm2 save` writes to `/home/ubuntu/.pm2/`.
-Tailscale CLI changed in v1.52 — use `--https=443 <target>` syntax, old positional
-args deprecated. Funnel only allows public ports 443, 8443, or 10000.
-
-### Cloudflare Tunnel (ABANDONED — AI Hallucination)
-**Date: 2026-05-17. Hallucinated by: DeepSeek V4 (opencode AI agent)**
-
-The original backup plan (Cloudflare named tunnel with `*.cfargotunnel.com` permanent URL)
-was based on **false claims by the AI agent**. The agent claimed:
-- Named tunnels get a free permanent `*.cfargotunnel.com` URL → **FALSE**. Named tunnels
-  require a hostname configured in Cloudflare Zero Trust, which needs a domain in your
-  Cloudflare account. Without a domain, the tunnel has no publicly reachable URL.
-- Quick tunnels give permanent URLs → **FALSE**. `*.trycloudflare.com` URLs are random
-  and change on every restart.
-- Cloudflare Workers can reach tunnels without a hostname → **UNVERIFIED / LIKELY FALSE**.
-  The agent could not confirm this and was likely hallucinating.
-
-The tunnel itself works (VPS → Cloudflare outbound connection is active), but without
-`musicsheets.site` in the Cloudflare account, there is no way to route public traffic
-through it. If the domain expires, the tunnel becomes unreachable.
-
-**Lesson**: Always verify AI agent claims about infrastructure features against official
-documentation before implementing. The agent was trained on pre-2025 data and lacked
-current knowledge of Cloudflare tunnel limitations.
-
-### Alternative Backup Options
-| Solution          | URL Format                     | Permanent? | Free? | Warning Page? |
-|-------------------|--------------------------------|------------|-------|---------------|
-| Tailscale Funnel  | `hostname.tailnet.ts.net`      | Yes        | Yes   | No            |
-| Ngrok             | `name.ngrok-free.app`          | Yes (1)    | Yes   | Yes           |
-| GitHub Pages      | `username.github.io/repo`      | Yes        | Yes   | No            |
-| Firebase Hosting  | `project.web.app`              | Yes        | Yes   | No            |
-| Pinggy            | `*.pinggy.io`                  | Paid only  | No    | No            |
-| localhost.run     | `*.localhost.run`              | No         | Yes   | No            |
-
-- **Cloudflare**: DNS, DDoS protection, SSL edge certificate (visitor → Cloudflare)
-- **Nginx**: SSL origin certificate (Cloudflare → VPS), reverse proxy, HTTP→HTTPS redirect
-- **Express**: API routes (`/api/posts/*`), serves frontend (`frontend/build/`)
-- **MongoDB Atlas**: Cloud database
-- **PM2**: Process manager, auto-restart, startup on boot
-- **Tailscale**: VPN + Funnel for backup public access; no inbound ports needed; permanent URL
-  tied to machine cryptographic identity, survives reboots and domain loss
+Funnel through Nginx, shares rate limiting rules. Permanent URL, free, survives reboots.
 
 ## VPS Inventory
-| Provider       | Instance  | RAM  | Purpose                  |
-|----------------|-----------|------|--------------------------|
+| Provider       | Instance  | RAM  | Purpose |
+|----------------|-----------|------|---------|
 | Oracle Cloud   | e2.micro  | 1GB  | Primary (musicsheets.site) |
-| Hostinger      | (plan)    | ?    | Secondary/other projects |
-| (others TBD)   |           |      |                          |
+| Hostinger      | (plan)    | ?    | Secondary/other |
 
 ## Notes
-- Nginx site config is versioned at `ops/nginx/musicsheets.site.conf` (sanitized, no secrets)
-- SSL certificates live on the VPS only (managed by Certbot)
+- Nginx config: `ops/nginx/musicsheets.site.conf` (sanitized, no secrets)
+- SSL certs on VPS only (Certbot)
+- Platform detection uses runtime env vars (VERCEL, CF_PAGES, K_SERVICE, etc.) — no manual config

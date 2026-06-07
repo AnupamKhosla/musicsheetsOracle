@@ -17,11 +17,16 @@ export default function PostPage() {
   const [post, setPost] = useState<any>({});
   const [notation, setNotation] = useState('western');
   const [passInput, setPassInput] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetch(`/api/posts/${params.id}`)
-      .then(r => r.json())
-      .then(setPost);
+      .then(async r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then(setPost)
+      .catch(() => setError('Failed to load sheet'));
   }, [params.id]);
 
   const deletePost = async () => {
@@ -105,7 +110,7 @@ export default function PostPage() {
         </div>
       </section>
 
-      <div className="container flex items-center mb-5">
+      <form onSubmit={e => { e.preventDefault(); deletePost(); }} className="container flex items-center mb-5">
         <input
           className="text-sm py-1 px-3 me-2 mt-2 focus:border-rose-700 text-base text-gray-700 placeholder-gray-600 border rounded-lg focus:shadow-outline"
           type="password"
@@ -114,8 +119,8 @@ export default function PostPage() {
           onChange={e => setPassInput(e.target.value)}
         />
         <button
+          type="submit"
           className="text-sm py-1 px-3 inline-block tracking-wide border align-middle transition duration-500 ease-in-out text-base text-center bg-rose-600 hover:bg-rose-700 border-rose-600 hover:border-rose-700 text-white rounded-md me-2 mt-2"
-          onClick={deletePost}
         >
           Delete sheet
         </button>
@@ -126,7 +131,7 @@ export default function PostPage() {
         >
           Download
         </a>
-      </div>
+      </form>
     </>
   );
 }

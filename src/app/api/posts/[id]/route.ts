@@ -7,9 +7,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  let objectId: ObjectId;
+  try {
+    objectId = new ObjectId(id);
+  } catch {
+    return Response.json({ error: 'Invalid ID' }, { status: 400 });
+  }
   const db = await getDb();
   const collection = db.collection('musicsheets');
-  const result = await collection.findOne({ _id: new ObjectId(id) });
+  const result = await collection.findOne({ _id: objectId });
   if (!result) return Response.json({ error: 'Not found' }, { status: 404 });
   return Response.json({ ...result, _id: result._id.toString() });
 }
