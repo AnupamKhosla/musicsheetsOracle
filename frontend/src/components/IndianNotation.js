@@ -74,7 +74,7 @@ export default function IndianNotation({ fileUrl }) {
 
   return (
     <div>
-      <div className="bhatkhande-notice">⚠ Experimental — may contain translation errors</div>
+      <div className="bhatkhande-notice">⚠ Experimental — may contain some translation errors.</div>
       <div className="bhatkhande-notation">
       <div className="bhatkhande-header">
         {data.title && <span className="bhatkhande-title">{data.title}</span>}

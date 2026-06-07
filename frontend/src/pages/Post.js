@@ -6,7 +6,7 @@ import IndianNotation from "../components/IndianNotation";
 
 const TABS = [
   { key: 'western', label: 'Western Staff' },
-  { key: 'indian', label: 'Indian Bhatkhande' },
+  { key: 'indian', label: 'Indian-Bhatkhande' },
 ];
 
 export default function App() {
