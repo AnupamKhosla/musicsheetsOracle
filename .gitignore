@@ -13,3 +13,4 @@ frontend/build/*
 .commandcode
 ops/deploy-lock
 ops/deploy-logs.html
+next-env.d.ts
