@@ -82,7 +82,7 @@ export default function MaintenancePage() {
         Waiting for pipeline...
       </pre>
       <p style={{ color: '#484f58', fontSize: 11, marginTop: 16 }}>
-        Do not close this page — reloads automatically when deploy finishes.
+        Do not close this page — reloads when deploy finishes.
       </p>
     </div>
   );
