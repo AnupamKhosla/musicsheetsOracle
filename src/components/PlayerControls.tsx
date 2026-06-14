@@ -9,6 +9,8 @@ interface PlayerControlsProps {
   defaultBpm?: number;
   label?: string;
   voice?: Voice;
+  /** Called on every animation frame with the current beat index (0-based). */
+  onBeatChange?: (beat: number) => void;
 }
 
 const VOICE_LABELS: Record<Voice, string> = {
@@ -23,19 +25,51 @@ export default function PlayerControls({
   defaultBpm = 90,
   label = 'Play',
   voice = 'triangle',
+  onBeatChange,
 }: PlayerControlsProps) {
   const [state, setState] = useState<'idle' | 'loading' | 'playing' | 'done'>('idle');
   const [bpm, setBpm] = useState<number>(defaultBpm);
   const [selectedVoice, setSelectedVoice] = useState<Voice>(voice);
   const handleRef = useRef<PlaybackHandle | null>(null);
-  const onFinishRef = useRef<(() => void) | null>(null);
+  const animRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const bpmRef = useRef<number>(defaultBpm);
 
   useEffect(() => {
     return () => {
       handleRef.current?.stop();
       handleRef.current = null;
+      if (animRef.current !== null) {
+        cancelAnimationFrame(animRef.current);
+        animRef.current = null;
+      }
     };
   }, []);
+
+  const startBeatTracking = () => {
+    if (!onBeatChange) return;
+    startTimeRef.current = performance.now();
+    bpmRef.current = bpm;
+    let lastBeat = -1;
+    const tick = () => {
+      const elapsedSec = (performance.now() - startTimeRef.current) / 1000;
+      const beat = elapsedSec * (bpmRef.current / 60);
+      if (Math.floor(beat) !== lastBeat) {
+        lastBeat = Math.floor(beat);
+        onBeatChange(beat);
+      }
+      animRef.current = requestAnimationFrame(tick);
+    };
+    animRef.current = requestAnimationFrame(tick);
+  };
+
+  const stopBeatTracking = () => {
+    if (animRef.current !== null) {
+      cancelAnimationFrame(animRef.current);
+      animRef.current = null;
+    }
+    onBeatChange?.(0);
+  };
 
   const play = async () => {
     if (events.length === 0) return;
@@ -48,23 +82,24 @@ export default function PlayerControls({
         voice: selectedVoice,
         onFinish: () => {
           handleRef.current = null;
-          onFinishRef.current = null;
           setState('done');
+          stopBeatTracking();
         },
       });
-      onFinishRef.current = () => handleRef.current?.stop();
       setState('playing');
+      startBeatTracking();
     } catch (e) {
       console.error('Playback failed', e);
       setState('idle');
+      stopBeatTracking();
     }
   };
 
   const stop = () => {
     handleRef.current?.stop();
     handleRef.current = null;
-    onFinishRef.current = null;
     setState('idle');
+    stopBeatTracking();
   };
 
   return (

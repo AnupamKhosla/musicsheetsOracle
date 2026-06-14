@@ -151,4 +151,10 @@
         color: rgba(225, 29, 72, 0.2);
     font-size: 1.5rem;
     }
+
+    .bhatkhande-current {
+        background: rgba(225, 29, 72, 0.18) !important;
+        box-shadow: inset 0 0 0 2px #E11D48;
+        transition: background 0.05s ease;
+    }
 }

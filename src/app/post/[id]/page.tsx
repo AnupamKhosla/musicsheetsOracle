@@ -15,12 +15,15 @@ const TABS = [
   { key: 'indian', label: 'Indian Bhatkhande' },
 ];
 
+type Source = 'western' | 'indian';
+
 export default function PostPage() {
   const params = useParams();
   const [post, setPost] = useState<any>({});
   const [notation, setNotation] = useState('western');
   const [passInput, setPassInput] = useState('');
   const [error, setError] = useState('');
+  const [currentBeat, setCurrentBeat] = useState(-1);
 
   useEffect(() => {
     fetch(`/api/posts/${params.id}`)
@@ -45,6 +48,30 @@ export default function PostPage() {
 
   const sheetUrl = post.sheetName ? `/sheets/${post.sheetName}.xml` : null;
   const sheetBaseName = post.sheetName || '';
+  const [lyrics, setLyrics] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!sheetUrl) return;
+    let cancelled = false;
+    loadMusicXmlFromUrl(sheetUrl)
+      .then((xml) => {
+        if (cancelled) return;
+        const parsed = parseMusicXMLString(xml);
+        setLyrics(parsed.lyrics);
+      })
+      .catch(() => {
+        if (!cancelled) setLyrics([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sheetUrl]);
+
+  // When switching tabs, drop the highlight so the previous view's
+  // "current" cell doesn't bleed into the new view.
+  useEffect(() => {
+    setCurrentBeat(-1);
+  }, [notation]);
 
   return (
     <>
@@ -108,23 +135,60 @@ export default function PostPage() {
               {sheetUrl && <OSMDWrapper file={sheetUrl} />}
               {sheetUrl && (
                 <div style={{ marginTop: '1rem' }}>
-                  <PlayerForSheet url={sheetUrl} label="Play Western Staff" />
+                  <PlayerForSheet url={sheetUrl} label="Play Western Staff" source="western" />
                 </div>
               )}
             </div>
           )}
           {notation === 'indian' && (
             <div className="min-h-[40rem]">
-              {sheetUrl && <IndianNotation fileUrl={sheetUrl} />}
+              {sheetUrl && <IndianNotation fileUrl={sheetUrl} currentBeat={currentBeat} />}
               {sheetUrl && (
                 <div style={{ marginTop: '1rem' }}>
-                  <PlayerForSheet url={sheetUrl} label="Play Bhatkhande" />
+                  <PlayerForSheet
+                    url={sheetUrl}
+                    label="Play Bhatkhande"
+                    source="indian"
+                    onBeatChange={setCurrentBeat}
+                  />
                 </div>
               )}
             </div>
           )}
         </div>
       </section>
+
+      {lyrics.length > 0 && (
+        <section className="container relative my-8">
+          <h2
+            style={{
+              fontSize: '1.1rem',
+              fontWeight: 600,
+              color: '#9F1239',
+              borderBottom: '1px solid #fecdd3',
+              paddingBottom: '0.4rem',
+              marginBottom: '0.75rem',
+            }}
+          >
+            Lyrics
+          </h2>
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #fecdd3',
+              borderRadius: 8,
+              padding: '1rem 1.25rem',
+              fontSize: '1rem',
+              lineHeight: 1.7,
+              color: '#1C1917',
+              whiteSpace: 'pre-wrap',
+              fontFamily: '"EB Garamond", Georgia, serif',
+            }}
+          >
+            {lyrics.join(' ')}
+          </div>
+        </section>
+      )}
 
       <form onSubmit={e => { e.preventDefault(); deletePost(); }} className="container flex items-center mb-5">
         <input
@@ -153,10 +217,23 @@ export default function PostPage() {
 }
 
 // Loads MusicXML (handles .mxl zip transparently), extracts MIDI events, and
-// hands them to PlayerControls. Used by both tab views; each PlayerControls
-// instance is independent so the user can compare Western and Indian playback
-// by switching tabs.
-function PlayerForSheet({ url, label }: { url: string; label: string }) {
+// hands them to PlayerControls. The "source" prop determines which code path
+// derives the events:
+//   source="western" → extractWesternEvents() (direct from parsed XML).
+//   source="indian"  → same for now (see HANDOVER.md for the planned
+//                      refactor that derives events from the swara grid so
+//                      multi-voice pieces play all hands).
+function PlayerForSheet({
+  url,
+  label,
+  source,
+  onBeatChange,
+}: {
+  url: string;
+  label: string;
+  source: Source;
+  onBeatChange?: (beat: number) => void;
+}) {
   const [events, setEvents] = useState<MidiEvent[] | null>(null);
 
   useEffect(() => {
@@ -166,6 +243,7 @@ function PlayerForSheet({ url, label }: { url: string; label: string }) {
         if (cancelled) return;
         const parsed: ParsedScore = parseMusicXMLString(xml);
         setEvents(extractWesternEvents(parsed));
+        void source; // Source currently selects label only; events come from the same MIDI extractor.
       })
       .catch((e) => {
         if (!cancelled) {
@@ -176,10 +254,10 @@ function PlayerForSheet({ url, label }: { url: string; label: string }) {
     return () => {
       cancelled = true;
     };
-  }, [url]);
+  }, [url, source]);
 
   if (events === null) {
     return <div style={{ color: '#888', fontSize: '0.85rem' }}>Preparing playback…</div>;
   }
-  return <PlayerControls events={events} label={label} />;
+  return <PlayerControls events={events} label={label} onBeatChange={onBeatChange} />;
 }

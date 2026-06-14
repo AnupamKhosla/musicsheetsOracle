@@ -20,6 +20,7 @@ export interface ParsedScore {
   divisions: number;
   title: string;
   notes: ParsedNote[];
+  lyrics: string[];
 }
 
 const SHARPS = ['F', 'C', 'G', 'D', 'A', 'E', 'B'];
@@ -111,5 +112,15 @@ export function parseMusicXMLDoc(doc: Document): ParsedScore {
     notes.push({ step, alter, octave, duration, voice, isChord, isRest, tieStart, tieStop });
   });
 
-  return { key: { fifths, mode }, time: { beats, beatType }, divisions, title, notes };
+  // Extract lyrics. MusicXML stores them per-note as <lyric><text>...</text></lyric>.
+  // A note can carry lyrics for multiple verses (lyric@number="1", "2", ...).
+  // We collect them as a flat string array (one entry per lyric element, in
+  // document order) so the renderer can choose how to display them.
+  const lyrics: string[] = [];
+  firstPart.querySelectorAll('measure note lyric text').forEach((textEl) => {
+    const t = textEl.textContent?.trim();
+    if (t) lyrics.push(t);
+  });
+
+  return { key: { fifths, mode }, time: { beats, beatType }, divisions, title, notes, lyrics };
 }

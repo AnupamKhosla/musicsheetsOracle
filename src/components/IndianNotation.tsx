@@ -23,9 +23,12 @@ function suggestThaat(fifths: number, mode: string): string | null {
 export default function IndianNotation({
   fileUrl,
   language: languageProp,
+  currentBeat = -1,
 }: {
   fileUrl: string;
   language?: Language;
+  /** Current beat index (0-based, fractional). -1 = not playing. */
+  currentBeat?: number;
 }) {
   const [parsed, setParsed] = useState<ParsedScore | null>(null);
   const [internalLanguage, setInternalLanguage] = useState<Language>('hindi');
@@ -91,7 +94,13 @@ export default function IndianNotation({
         <table className="bhatkhande-grid">
           <tbody>
             {data.rows.map((row, ri) => (
-              <RowWithHeader key={ri} beatMarks={row.beatMarks} cells={row.cells} />
+              <RowWithHeader
+                key={ri}
+                beatMarks={row.beatMarks}
+                cells={row.cells}
+                rowStartBeat={ri * 8}
+                currentBeat={currentBeat}
+              />
             ))}
           </tbody>
         </table>
@@ -104,28 +113,47 @@ export default function IndianNotation({
   );
 }
 
-function RowWithHeader({ beatMarks, cells }: { beatMarks: string[]; cells: string[][] }) {
+function RowWithHeader({
+  beatMarks,
+  cells,
+  rowStartBeat,
+  currentBeat,
+}: {
+  beatMarks: string[];
+  cells: string[][];
+  rowStartBeat: number;
+  currentBeat: number;
+}) {
+  const isCurrent = (globalBeat: number) =>
+    currentBeat >= 0 && currentBeat >= globalBeat && currentBeat < globalBeat + 1;
+
   return (
     <>
       <tr className="bhatkhande-beat-row">
-        {beatMarks.map((mark, i) => (
-          <td
-            key={i}
-            className={`bhatkhande-beat-cell ${mark === '\u0938\u092E' ? 'bhatkhande-sam' : ''}`}
-          >
-            {mark}
-          </td>
-        ))}
+        {beatMarks.map((mark, i) => {
+          const globalBeat = rowStartBeat + i;
+          return (
+            <td
+              key={i}
+              className={`bhatkhande-beat-cell ${mark === '\u0938\u092E' ? 'bhatkhande-sam' : ''} ${isCurrent(globalBeat) ? 'bhatkhande-current' : ''}`}
+            >
+              {mark}
+            </td>
+          );
+        })}
       </tr>
       <tr className="bhatkhande-swar-row">
-        {cells.map((cell, i) => (
-          <td
-            key={i}
-            className={`bhatkhande-swar-cell ${cell.join('') === '\u00B7' ? 'bhatkhande-rest' : ''}`}
-          >
-            {cell}
-          </td>
-        ))}
+        {cells.map((cell, i) => {
+          const globalBeat = rowStartBeat + i;
+          return (
+            <td
+              key={i}
+              className={`bhatkhande-swar-cell ${cell.join('') === '\u00B7' ? 'bhatkhande-rest' : ''} ${isCurrent(globalBeat) ? 'bhatkhande-current' : ''}`}
+            >
+              {cell}
+            </td>
+          );
+        })}
       </tr>
     </>
   );

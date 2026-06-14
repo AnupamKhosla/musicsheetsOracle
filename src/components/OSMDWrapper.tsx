@@ -16,7 +16,12 @@ export default class OSMDWrapper extends Component<Props> {
   setupOsmd() {
     const options = {
       autoResize: this.props.autoResize !== undefined ? this.props.autoResize : true,
-      drawTitle: this.props.drawTitle !== undefined ? this.props.drawTitle : true,
+      drawTitle: false,
+      drawSubtitle: false,
+      drawLyrics: false,
+      drawCredits: false,
+      drawPartNames: false,
+      drawMeasureNumbers: false,
     };
     this.osmd = new OSMD(this.divRef.current!, options);
     this.osmd.load(this.props.file).then(() => {
@@ -32,9 +37,7 @@ export default class OSMDWrapper extends Component<Props> {
   }
 
   componentDidUpdate(prevProps: Props) {
-    if (this.props.drawTitle !== prevProps.drawTitle) {
-      this.setupOsmd();
-    } else {
+    if (this.props.file !== prevProps.file) {
       this.osmd.load(this.props.file).then(() => {
         this.osmd.zoom = 0.75;
         this.osmd.render();
