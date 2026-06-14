@@ -82,8 +82,7 @@ const FLATS = ['B', 'E', 'A', 'D', 'G', 'C', 'F'];
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 const HINDI_NUMS = [
-  '\u0967', '\u0968', '\u0969', '\u096A', '\u096B', '\u096C', '\u096D', '\u096E', '\u096F',
-  '\u0967\u0966', '\u0967\u0967', '\u0967\u0968', '\u0967\u0969', '\u0967\u096A', '\u0967\u096B', '\u0967\u096C',
+  '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16',
 ];
 const ROW_BEATS = 8;
 const TIE = '\u2014';
@@ -120,7 +119,7 @@ function findSaOctave(notes: ParsedNote[], saSemitone: number, keyAlter: Record<
 }
 
 interface VoiceResult {
-  beats: string[][];
+  beats: string[][][];
   midiEvents: MidiEvent[];
 }
 
@@ -132,7 +131,9 @@ function processVoice(
   keyAlter: Record<string, number>,
   divsPerBeat: number,
 ): VoiceResult {
-  const allBeats: string[][] = [];
+  // Per beat: array of sub-rows. Each sub-row = string[] of swaras.
+  // Chord notes → each gets its own sub-row. Sequential notes in same beat → share one sub-row.
+  const allBeats: string[][][] = [];
   const midiEvents: MidiEvent[] = [];
 
   const ensureBeats = (n: number) => {
@@ -141,6 +142,7 @@ function processVoice(
 
   let cumDiv = 0;
   let lastStartDiv = 0;
+  let lastDisplayBeat = -1;
   let tieStartBeat: number | null = null;
   let tieLastDashedBeat = -1;
   let tieMidiStartDiv = 0;
@@ -158,7 +160,8 @@ function processVoice(
       ensureBeats(newEndBeat);
       const from = Math.max(tieLastDashedBeat + 1, tieStartBeat + 1);
       for (let b = from; b <= newEndBeat; b++) {
-        allBeats[b].push(TIE);
+        if (allBeats[b].length === 0) allBeats[b] = [[TIE]];
+        else allBeats[b][0].push(TIE);
       }
       tieLastDashedBeat = newEndBeat;
       if (note.tieStop) {
@@ -195,9 +198,20 @@ function processVoice(
       const swaraText = swaraLabel + marker;
 
       ensureBeats(endBeat);
-      allBeats[displayBeat].push(swaraText);
+
+      // Chord notes: each gets its own sub-row (vertical stack).
+      // Sequential notes in same beat: share sub-row (horizontal concat).
+      if (note.isChord || displayBeat !== lastDisplayBeat) {
+        allBeats[displayBeat].push([swaraText]);
+      } else {
+        allBeats[displayBeat][allBeats[displayBeat].length - 1].push(swaraText);
+      }
+
+      // Tie continuations for longer notes
       for (let b = displayBeat + 1; b <= endBeat; b++) {
-        allBeats[b].push(TIE);
+        ensureBeats(b);
+        if (allBeats[b].length === 0) allBeats[b] = [[TIE]];
+        else allBeats[b][allBeats[b].length - 1].push(TIE);
       }
       tieLastDashedBeat = endBeat;
 
@@ -210,6 +224,8 @@ function processVoice(
       } else {
         midiEvents.push({ midi, startBeat: midiStartBeat, durationBeats: midiDuration });
       }
+
+      lastDisplayBeat = displayBeat;
     }
 
     if (!note.isChord) {
@@ -220,7 +236,7 @@ function processVoice(
 
   // Fill empty beats with REST
   for (let i = 0; i < allBeats.length; i++) {
-    if (allBeats[i].length === 0) allBeats[i] = [REST];
+    if (allBeats[i].length === 0) allBeats[i] = [[REST]];
   }
 
   return { beats: allBeats, midiEvents };
@@ -270,20 +286,20 @@ export function convertToBhatkhande(opts: NotationOptions): NotationData {
     allMidiEvents.push(...result.midiEvents);
   }
 
-  // Merge per-voice beats: each cell becomes a string[][] where
-  // sub-array[0] = voice 1 swaras, sub-array[1] = voice 2 swaras, etc.
-  // Rendered vertically: top line = melody, lines below = harmony/other hands.
+  // Merge per-voice beats: each cell = string[][], top to bottom per voice.
+  // Chord sub-rows within a voice stack vertically, sequential notes concat horizontally.
   const maxBeats = voiceResults.reduce((m, v) => Math.max(m, v.result.beats.length), 0);
   const allBeats: string[][][] = [];
   for (let i = 0; i < maxBeats; i++) {
-    const cell: string[][] = [];
+    allBeats[i] = [];
     for (const { result } of voiceResults) {
       if (i < result.beats.length) {
-        const swaras = result.beats[i].filter((s) => s !== REST);
-        if (swaras.length > 0) cell.push(swaras);
+        for (const subRow of result.beats[i]) {
+          if (subRow.length > 0) allBeats[i].push(subRow);
+        }
       }
     }
-    allBeats.push(cell.length > 0 ? cell : [[REST]]);
+    if (allBeats[i].length === 0) allBeats[i] = [[REST]];
   }
 
   // Chord event count

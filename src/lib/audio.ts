@@ -56,6 +56,7 @@ export interface PlaybackOptions {
 
 export interface PlaybackHandle {
   stop: () => void;
+  pause: () => void;
   totalDurationMs: number;
 }
 
@@ -104,11 +105,6 @@ export async function playEvents(
         clearTimeout(finishTimer);
         finishTimer = null;
       }
-      // Dispose the synth outright — releaseAll() respects the envelope's
-      // release time so notes fade out audibly, which is fine for ending a
-      // piece but not what a Stop button should do. Disposing guarantees
-      // silence within one audio frame. A fresh synth is built on the next
-      // playEvents() call.
       if (synth === s) {
         synth?.dispose();
         synth = null;
@@ -116,6 +112,10 @@ export async function playEvents(
       } else {
         s.releaseAll(0);
       }
+    },
+    pause: () => {
+      if (stopped) return;
+      s.releaseAll(0.1);
     },
     totalDurationMs: totalSecs * 1000,
   };
