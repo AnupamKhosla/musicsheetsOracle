@@ -147,6 +147,16 @@
         vertical-align: middle;
     }
 
+    .bhatkhande-subrow {
+        line-height: 1.5;
+    }
+
+    .bhatkhande-subrow:not(:last-child) {
+        border-bottom: 1px solid rgba(225, 29, 72, 0.08);
+        padding-bottom: 1px;
+        margin-bottom: 1px;
+    }
+
     .bhatkhande-rest {
         color: rgba(225, 29, 72, 0.2);
     font-size: 1.5rem;

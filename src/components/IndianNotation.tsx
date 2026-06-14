@@ -120,7 +120,7 @@ function RowWithHeader({
   currentBeat,
 }: {
   beatMarks: string[];
-  cells: string[][];
+  cells: string[][][];
   rowStartBeat: number;
   currentBeat: number;
 }) {
@@ -145,12 +145,15 @@ function RowWithHeader({
       <tr className="bhatkhande-swar-row">
         {cells.map((cell, i) => {
           const globalBeat = rowStartBeat + i;
+          const isRest = cell.length === 1 && cell[0].length === 1 && cell[0][0] === '\u00B7';
           return (
             <td
               key={i}
-              className={`bhatkhande-swar-cell ${cell.join('') === '\u00B7' ? 'bhatkhande-rest' : ''} ${isCurrent(globalBeat) ? 'bhatkhande-current' : ''}`}
+              className={`bhatkhande-swar-cell ${isRest ? 'bhatkhande-rest' : ''} ${isCurrent(globalBeat) ? 'bhatkhande-current' : ''}`}
             >
-              {cell}
+              {cell.map((subRow, si) => (
+                <div key={si} className="bhatkhande-subrow">{subRow.join('')}</div>
+              ))}
             </td>
           );
         })}

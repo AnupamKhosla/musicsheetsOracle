@@ -51,7 +51,7 @@ export interface NotationOptions {
 }
 
 export interface DisplayRow {
-  cells: string[][];
+  cells: string[][][];
   beatMarks: string[];
 }
 
@@ -270,22 +270,23 @@ export function convertToBhatkhande(opts: NotationOptions): NotationData {
     allMidiEvents.push(...result.midiEvents);
   }
 
-  // Merge per-voice beats by beat index
+  // Merge per-voice beats: each cell becomes a string[][] where
+  // sub-array[0] = voice 1 swaras, sub-array[1] = voice 2 swaras, etc.
+  // Rendered vertically: top line = melody, lines below = harmony/other hands.
   const maxBeats = voiceResults.reduce((m, v) => Math.max(m, v.result.beats.length), 0);
-  const allBeats: string[][] = [];
+  const allBeats: string[][][] = [];
   for (let i = 0; i < maxBeats; i++) {
-    allBeats[i] = [];
+    const cell: string[][] = [];
     for (const { result } of voiceResults) {
       if (i < result.beats.length) {
-        for (const swara of result.beats[i]) {
-          if (swara !== REST) allBeats[i].push(swara);
-        }
+        const swaras = result.beats[i].filter((s) => s !== REST);
+        if (swaras.length > 0) cell.push(swaras);
       }
     }
-    if (allBeats[i].length === 0) allBeats[i] = [REST];
+    allBeats.push(cell.length > 0 ? cell : [[REST]]);
   }
 
-  // Chord event count: notes at beats where 2+ midi events share the same startBeat
+  // Chord event count
   const beatCounts: Record<number, number> = {};
   for (const e of allMidiEvents) {
     beatCounts[e.startBeat] = (beatCounts[e.startBeat] || 0) + 1;
