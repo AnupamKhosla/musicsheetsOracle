@@ -37,6 +37,32 @@ export function parseMusicXMLString(xml: string): ParsedScore {
   return parseMusicXMLDoc(doc);
 }
 
+export async function loadMusicXmlFromUrl(url: string): Promise<string> {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status} fetching ${url}`);
+  const blob = await r.blob();
+
+  // Detect ZIP / .mxl by magic number (PK\x03\x04).
+  const head = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+  const isZip = head[0] === 0x50 && head[1] === 0x4B && head[2] === 0x03 && head[3] === 0x04;
+
+  if (!isZip) return blob.text();
+
+  // Dynamic import keeps jszip out of the initial bundle — only fetched
+  // when a .mxl is actually requested.
+  const { default: JSZip } = await import('jszip');
+  const zip = await JSZip.loadAsync(blob);
+  const containerFile = zip.file('META-INF/container.xml');
+  if (!containerFile) throw new Error('Invalid .mxl: missing META-INF/container.xml');
+  const containerXml = await containerFile.async('text');
+  const containerDoc = new DOMParser().parseFromString(containerXml, 'application/xml');
+  const rootfile = containerDoc.querySelector('rootfile')?.getAttribute('full-path');
+  if (!rootfile) throw new Error('Invalid .mxl: missing <rootfile full-path> in container.xml');
+  const scoreFile = zip.file(rootfile);
+  if (!scoreFile) throw new Error(`Invalid .mxl: referenced ${rootfile} not found in archive`);
+  return scoreFile.async('text');
+}
+
 export function parseMusicXMLDoc(doc: Document): ParsedScore {
   const errNode = doc.querySelector('parsererror');
   if (errNode) throw new Error('Invalid MusicXML: ' + errNode.textContent);

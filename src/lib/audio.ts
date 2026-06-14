@@ -1,52 +1,56 @@
 // Audio playback engine. Wraps Tone.js so the rest of the app doesn't depend
-// on its API. Uses Tone.Sampler with the Salamander grand piano samples
-// (free, hosted by Tone.js). One global Sampler instance is reused across
-// all players.
+// on its API.
+//
+// Uses Tone.PolySynth(Tone.Synth) — direct oscillator synthesis, no samples
+// to download, instant playback. A voice selector picks the oscillator type
+// (sine / triangle / square / sawtooth). Real-instrument voices (piano,
+// harmonium) will plug in here later by swapping the synth for a Sampler
+// or soundfont-player source — the rest of the API stays the same.
 
 import * as Tone from 'tone';
 import type { MidiEvent } from './midi';
 
 const DEFAULT_BPM = 90;
 
-let sampler: Tone.Sampler | null = null;
-let initPromise: Promise<Tone.Sampler> | null = null;
+export type Voice = 'sine' | 'triangle' | 'square' | 'sawtooth';
 
-const SAMPLER_URLS: Record<string, string> = {
-  A1: 'A1.mp3',
-  A2: 'A2.mp3',
-  A3: 'A3.mp3',
-  A4: 'A4.mp3',
-  A5: 'A5.mp3',
-  A6: 'A6.mp3',
-  C1: 'C1.mp3',
-  C2: 'C2.mp3',
-  C3: 'C3.mp3',
-  C4: 'C4.mp3',
-  C5: 'C5.mp3',
-  'D#3': 'Ds3.mp3',
-  'F#3': 'Fs3.mp3',
-  'A#3': 'As3.mp3',
-  'C#4': 'Cs4.mp3',
-  'F#4': 'Fs4.mp3',
+interface VoiceParams {
+  oscType: OscillatorType;
+  envelope: { attack: number; decay: number; sustain: number; release: number };
+}
+
+const VOICE_PARAMS: Record<Voice, VoiceParams> = {
+  sine:     { oscType: 'sine',     envelope: { attack: 0.02, decay: 0.1, sustain: 0.6, release: 0.4 } },
+  triangle: { oscType: 'triangle', envelope: { attack: 0.02, decay: 0.1, sustain: 0.5, release: 0.5 } },
+  square:   { oscType: 'square',   envelope: { attack: 0.005, decay: 0.05, sustain: 0.4, release: 0.2 } },
+  sawtooth: { oscType: 'sawtooth', envelope: { attack: 0.005, decay: 0.05, sustain: 0.4, release: 0.2 } },
 };
 
-async function getSampler(): Promise<Tone.Sampler> {
-  if (sampler) return sampler;
-  if (initPromise) return initPromise;
-  initPromise = (async () => {
-    const s = new Tone.Sampler({
-      urls: SAMPLER_URLS,
-      baseUrl: 'https://tonejs.github.io/audio/salamander/',
-      release: 1,
-    }).toDestination();
-    await Tone.loaded();
-    return s;
-  })();
-  return initPromise;
+let synth: Tone.PolySynth | null = null;
+let currentVoice: Voice | null = null;
+
+function getSynth(voice: Voice): Tone.PolySynth {
+  if (synth && currentVoice === voice) return synth;
+  if (synth) synth.dispose();
+  const p = VOICE_PARAMS[voice];
+  synth = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: p.oscType },
+    envelope: p.envelope,
+  }).toDestination();
+  currentVoice = voice;
+  return synth;
+}
+
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+function midiToNoteName(midi: number): string {
+  const octave = Math.floor(midi / 12) - 1;
+  const note = NOTE_NAMES[((midi % 12) + 12) % 12];
+  return `${note}${octave}`;
 }
 
 export interface PlaybackOptions {
   bpm?: number;
+  voice?: Voice;
   onFinish?: () => void;
 }
 
@@ -55,8 +59,10 @@ export interface PlaybackHandle {
   totalDurationMs: number;
 }
 
-export async function preloadSamples(): Promise<void> {
-  await getSampler();
+export async function preloadSamples(_voice: Voice = 'triangle'): Promise<void> {
+  // No-op with synth. Kept for API stability so PlayerControls can still
+  // call it the same way it would with a real sampler.
+  await Tone.start();
 }
 
 export async function playEvents(
@@ -64,7 +70,7 @@ export async function playEvents(
   opts: PlaybackOptions = {},
 ): Promise<PlaybackHandle> {
   await Tone.start();
-  const s = await getSampler();
+  const s = getSynth(opts.voice ?? 'triangle');
 
   const bpm = opts.bpm ?? DEFAULT_BPM;
   const secPerBeat = 60 / bpm;
@@ -76,7 +82,11 @@ export async function playEvents(
   for (const e of events) {
     const time = startAt + e.startBeat * secPerBeat;
     const dur = Math.max(0.05, e.durationBeats * secPerBeat);
-    s.triggerAttackRelease(Tone.Frequency(e.midi, 'midi').toFrequency(), dur, time);
+    try {
+      s.triggerAttackRelease(midiToNoteName(e.midi), dur, time);
+    } catch (err) {
+      console.warn('triggerAttackRelease failed for', e, err);
+    }
   }
 
   let stopped = false;
@@ -94,14 +104,23 @@ export async function playEvents(
         clearTimeout(finishTimer);
         finishTimer = null;
       }
-      s.releaseAll();
+      // Dispose the synth outright — releaseAll() respects the envelope's
+      // release time so notes fade out audibly, which is fine for ending a
+      // piece but not what a Stop button should do. Disposing guarantees
+      // silence within one audio frame. A fresh synth is built on the next
+      // playEvents() call.
+      if (synth === s) {
+        synth?.dispose();
+        synth = null;
+        currentVoice = null;
+      } else {
+        s.releaseAll(0);
+      }
     },
     totalDurationMs: totalSecs * 1000,
   };
 }
 
 export async function stopAll(): Promise<void> {
-  if (sampler) {
-    sampler.releaseAll();
-  }
+  if (synth) synth.releaseAll();
 }

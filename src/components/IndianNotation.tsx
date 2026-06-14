@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { convertToBhatkhande, NotationData } from '@/lib/bhatkhande';
-import { parseMusicXMLString, type ParsedScore } from '@/lib/parseMusicXML';
+import { loadMusicXmlFromUrl, parseMusicXMLString, type ParsedScore } from '@/lib/parseMusicXML';
 import type { Language } from '@/lib/sargam-data';
 import { RAGA_LABELS } from '@/lib/sargam-data';
 
@@ -40,10 +40,7 @@ export default function IndianNotation({
     setError(null);
 
     fetch(fileUrl)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status} fetching ${fileUrl}`);
-        return r.text();
-      })
+      .then(() => loadMusicXmlFromUrl(fileUrl))
       .then((xmlText) => {
         setParsed(parseMusicXMLString(xmlText));
         setLoading(false);

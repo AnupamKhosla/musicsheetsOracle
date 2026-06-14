@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import IndianNotation from '@/components/IndianNotation';
 import PlayerControls from '@/components/PlayerControls';
 import type { Language } from '@/lib/sargam-data';
-import { parseMusicXMLString, type ParsedScore } from '@/lib/parseMusicXML';
+import { loadMusicXmlFromUrl, parseMusicXMLString, type ParsedScore } from '@/lib/parseMusicXML';
 import { extractWesternEvents, type MidiEvent } from '@/lib/midi';
 
 interface SheetEntry {
@@ -82,15 +82,17 @@ function PlayerForSheet({ url }: { url: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(url)
-      .then((r) => r.text())
+    loadMusicXmlFromUrl(url)
       .then((xml) => {
         if (cancelled) return;
         const parsed: ParsedScore = parseMusicXMLString(xml);
         setEvents(extractWesternEvents(parsed));
       })
-      .catch(() => {
-        if (!cancelled) setEvents([]);
+      .catch((e) => {
+        if (!cancelled) {
+          console.error('Failed to prepare events for', url, e);
+          setEvents([]);
+        }
       });
     return () => {
       cancelled = true;
@@ -121,9 +123,7 @@ function WesternView({ fileUrl }: { fileUrl: string }) {
           drawTitle: true,
           drawPartNames: false,
         });
-        const r = await fetch(fileUrl);
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const xml = await r.text();
+        const xml = await loadMusicXmlFromUrl(fileUrl);
         await osmd.load(xml);
         await osmd.render();
         if (!cancelled) setStatus('ok');
