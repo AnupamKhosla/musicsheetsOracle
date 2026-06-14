@@ -129,10 +129,7 @@ export default function IndianNotation({
 
   return (
     <div className="bhatkhande-notation">
-      <div className="bhatkhande-notice">
-        Auto-generated from MusicXML. Tonal center, octave mapping, and thaat are
-        inferred from the key signature — verify for accuracy before performance use.
-      </div>
+      <div className="bhatkhande-notice">⚠ Experimental — may contain translation errors</div>
 
       {!controlsHidden && (
         <div className="bhatkhande-controls">
