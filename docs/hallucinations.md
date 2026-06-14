@@ -20,3 +20,10 @@ This file tracks recurring mistakes, false claims, and hallucinations made by th
 ## Claim: "Cloudflare Workers can reach tunnels without a Zero Trust hostname"
 - **Status**: UNVERIFIED / LIKELY FALSE
 - **Reality**: The agent claimed Workers (being inside Cloudflare's network) could fetch tunnels directly via internal endpoints without a public hostname. This was never verified against Cloudflare documentation and is likely another hallucination.
+
+## Claim: "`export const dynamic = 'force-dynamic'` in root layout is the fix for Next.js 16 maintenance mode"
+- **Status**: FALSE
+- **Reality**: Adding `export const dynamic = 'force-dynamic'` to `src/app/layout.tsx` converts ALL pages to dynamic rendering (`ƒ` in build output) instead of just making the layout re-read the MAINTENANCE flag on every request. Static prerendering for `/`, `/search`, `/create` is lost.
+- **When it happened**: June 14, 2026 — the VPS maintenance page was stuck showing even after `MAINTENANCE=0`, and the agent claimed `force-dynamic` was previously committed (it never was — confirmed via `git log -p`).
+- **Root cause**: Next.js 16 Cache Components treats `fs.readFileSync` as a deterministic operation, baking it into the static HTML shell at build time. The root layout wrapping all pages means `force-dynamic` cascades to every route.
+- **Correct solution (pending)**: Next.js middleware — runs on every request, can check the flag file synchronously, and skip asset/API routes via matcher config. Does not affect page-level static generation. Alternative: `deploy.sh` does two `pm2 reload`s (one after setting flag to 1, one after setting flag to 0) so the process restarts fresh each time and re-reads the flag — no caching issue.

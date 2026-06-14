@@ -40,7 +40,6 @@ export default function MaintenancePage() {
               }
             }
             prevLenRef.current = html.length;
-            logRef.current.scrollTop = logRef.current.scrollHeight;
           }
         }
       } catch {}
