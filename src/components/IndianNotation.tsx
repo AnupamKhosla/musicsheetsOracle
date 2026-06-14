@@ -1,63 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { convertToBhatkhande, ParsedNote, NotationData } from '@/lib/bhatkhande';
+import { convertToBhatkhande, NotationData } from '@/lib/bhatkhande';
+import { parseMusicXMLString, type ParsedScore } from '@/lib/parseMusicXML';
 import type { Language } from '@/lib/sargam-data';
 import { RAGA_LABELS } from '@/lib/sargam-data';
-
-function extractNotesFromDoc(doc: Document) {
-  const firstPart = doc.querySelector('score-partwise > part') || doc.querySelector('part');
-  if (!firstPart) throw new Error('No <part> elements found in MusicXML');
-
-  const firstMeasure = firstPart.querySelector('measure');
-  if (!firstMeasure) throw new Error('No <measure> elements found in first part');
-
-  const attrs = firstMeasure.querySelector('attributes');
-  const keyEl = attrs?.querySelector('key');
-  const fifths = keyEl ? parseInt(keyEl.querySelector('fifths')?.textContent || '0') : 0;
-  const mode = keyEl?.querySelector('mode')?.textContent || 'major';
-
-  const timeEl = attrs?.querySelector('time');
-  const beats = timeEl ? parseInt(timeEl.querySelector('beats')?.textContent || '4') : 4;
-  const beatType = timeEl ? parseInt(timeEl.querySelector('beat-type')?.textContent || '4') : 4;
-
-  const divisionsEl = attrs?.querySelector('divisions');
-  const divisions = divisionsEl ? parseInt(divisionsEl.textContent || '1') : 1;
-
-  const title = doc.querySelector('work > work-title')?.textContent
-    || doc.querySelector('movement-title')?.textContent
-    || '';
-
-  const notes: ParsedNote[] = [];
-  firstPart.querySelectorAll('measure note').forEach((noteEl) => {
-    const isRest = noteEl.querySelector('rest') !== null;
-    const duration = parseInt(noteEl.querySelector('duration')?.textContent || '0');
-    let step = '';
-    let alter = 0;
-    let octave = 4;
-    if (!isRest) {
-      const pitch = noteEl.querySelector('pitch');
-      if (pitch) {
-        step = pitch.querySelector('step')?.textContent || '';
-        alter = parseInt(pitch.querySelector('alter')?.textContent || '0');
-        octave = parseInt(pitch.querySelector('octave')?.textContent || '4');
-      }
-    }
-    const isChord = noteEl.querySelector('chord') !== null;
-    const voice = noteEl.querySelector('voice')?.textContent || '1';
-    const tieStart = noteEl.querySelector('tie[type="start"]') !== null;
-    const tieStop = noteEl.querySelector('tie[type="stop"]') !== null;
-    notes.push({ step, alter, octave, duration, voice, isChord, isRest, tieStart, tieStop });
-  });
-
-  return {
-    key: { fifths, mode },
-    time: { beats, beatType },
-    divisions,
-    title,
-    notes,
-  };
-}
 
 // Heuristic: suggest a parent thaat (10-thaat system) from a Western key sig.
 //   major  → bilawal  (Ionian = all shuddh, all standard major keys)
@@ -80,13 +27,7 @@ export default function IndianNotation({
   fileUrl: string;
   language?: Language;
 }) {
-  const [parsed, setParsed] = useState<{
-    key: { fifths: number; mode: string };
-    time: { beats: number; beatType: number };
-    divisions: number;
-    title: string;
-    notes: ParsedNote[];
-  } | null>(null);
+  const [parsed, setParsed] = useState<ParsedScore | null>(null);
   const [internalLanguage, setInternalLanguage] = useState<Language>('hindi');
   const language = languageProp ?? internalLanguage;
   const controlsHidden = languageProp !== undefined;
@@ -104,11 +45,7 @@ export default function IndianNotation({
         return r.text();
       })
       .then((xmlText) => {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(xmlText, 'application/xml');
-        const errNode = doc.querySelector('parsererror');
-        if (errNode) throw new Error('Invalid MusicXML: ' + errNode.textContent);
-        setParsed(extractNotesFromDoc(doc));
+        setParsed(parseMusicXMLString(xmlText));
         setLoading(false);
       })
       .catch((e) => {

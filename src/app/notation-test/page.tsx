@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import IndianNotation from '@/components/IndianNotation';
+import PlayerControls from '@/components/PlayerControls';
 import type { Language } from '@/lib/sargam-data';
+import { parseMusicXMLString, type ParsedScore } from '@/lib/parseMusicXML';
+import { extractWesternEvents, type MidiEvent } from '@/lib/midi';
 
 interface SheetEntry {
   name: string;
@@ -33,6 +36,8 @@ export default function NotationTestPage() {
         Renders Western MusicXML (via OSMD) and the auto-generated Bhatkhande swara grid
         for each sample file. The parent thaat is inferred from the key signature.
         Pick a script (Devanagari / English / Bangla) to change swara labels.
+        Use the player to hear the piece — same audio for both views, since pitch
+        is pitch.
       </p>
 
       <div className="notation-test-controls" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', marginBottom: '1.5rem', padding: '0.75rem', background: '#f9fafb', borderRadius: 8 }}>
@@ -51,7 +56,8 @@ export default function NotationTestPage() {
           <h2 style={{ fontSize: '1.25rem', fontWeight: 600, borderBottom: '2px solid #e11d48', paddingBottom: '0.25rem', marginBottom: '0.75rem' }}>
             {sheet.title}
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <PlayerForSheet url={sheet.url} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.75rem' }}>
             <div>
               <h3 style={{ fontSize: '0.85rem', fontWeight: 600, color: '#666', marginBottom: '0.5rem' }}>
                 Western Staff
@@ -69,6 +75,32 @@ export default function NotationTestPage() {
       ))}
     </div>
   );
+}
+
+function PlayerForSheet({ url }: { url: string }) {
+  const [events, setEvents] = useState<MidiEvent[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(url)
+      .then((r) => r.text())
+      .then((xml) => {
+        if (cancelled) return;
+        const parsed: ParsedScore = parseMusicXMLString(xml);
+        setEvents(extractWesternEvents(parsed));
+      })
+      .catch(() => {
+        if (!cancelled) setEvents([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  if (events === null) {
+    return <div style={{ color: '#888', fontSize: '0.85rem' }}>Preparing playback…</div>;
+  }
+  return <PlayerControls events={events} label="Play" />;
 }
 
 function WesternView({ fileUrl }: { fileUrl: string }) {
