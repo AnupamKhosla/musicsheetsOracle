@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import IndianNotation from '@/components/IndianNotation';
+import PlayerControls from '@/components/PlayerControls';
+import { loadMusicXmlFromUrl, parseMusicXMLString, type ParsedScore } from '@/lib/parseMusicXML';
+import { extractWesternEvents, type MidiEvent } from '@/lib/midi';
 
 const OSMDWrapper = dynamic(() => import('@/components/OSMDWrapper'), { ssr: false });
 
@@ -39,6 +42,9 @@ export default function PostPage() {
       alert('wrong password');
     }
   };
+
+  const sheetUrl = post.sheetName ? `/sheets/${post.sheetName}.xml` : null;
+  const sheetBaseName = post.sheetName || '';
 
   return (
     <>
@@ -99,12 +105,22 @@ export default function PostPage() {
 
           {notation === 'western' && (
             <div className="min-h-[40rem]">
-              {post.sheetName && <OSMDWrapper file={'/sheets/' + post.sheetName + '.xml'} />}
+              {sheetUrl && <OSMDWrapper file={sheetUrl} />}
+              {sheetUrl && (
+                <div style={{ marginTop: '1rem' }}>
+                  <PlayerForSheet url={sheetUrl} label="Play Western Staff" />
+                </div>
+              )}
             </div>
           )}
           {notation === 'indian' && (
             <div className="min-h-[40rem]">
-              {post.sheetName && <IndianNotation fileUrl={'/sheets/' + post.sheetName + '.xml'} />}
+              {sheetUrl && <IndianNotation fileUrl={sheetUrl} />}
+              {sheetUrl && (
+                <div style={{ marginTop: '1rem' }}>
+                  <PlayerForSheet url={sheetUrl} label="Play Bhatkhande" />
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -125,7 +141,7 @@ export default function PostPage() {
           Delete sheet
         </button>
         <a
-          href={'/sheets/' + post.sheetName}
+          href={'/sheets/' + sheetBaseName}
           download
           className="text-sm py-1 px-3 inline-block tracking-wide border align-middle transition duration-500 ease-in-out text-base text-center bg-slate-600 hover:bg-slate-700 border-slate-600 hover:border-slate-700 text-white rounded-md me-2 mt-2"
         >
@@ -134,4 +150,36 @@ export default function PostPage() {
       </form>
     </>
   );
+}
+
+// Loads MusicXML (handles .mxl zip transparently), extracts MIDI events, and
+// hands them to PlayerControls. Used by both tab views; each PlayerControls
+// instance is independent so the user can compare Western and Indian playback
+// by switching tabs.
+function PlayerForSheet({ url, label }: { url: string; label: string }) {
+  const [events, setEvents] = useState<MidiEvent[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadMusicXmlFromUrl(url)
+      .then((xml) => {
+        if (cancelled) return;
+        const parsed: ParsedScore = parseMusicXMLString(xml);
+        setEvents(extractWesternEvents(parsed));
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          console.error('Failed to prepare events for', url, e);
+          setEvents([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  if (events === null) {
+    return <div style={{ color: '#888', fontSize: '0.85rem' }}>Preparing playback…</div>;
+  }
+  return <PlayerControls events={events} label={label} />;
 }
