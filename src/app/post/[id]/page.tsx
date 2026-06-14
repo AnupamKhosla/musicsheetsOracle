@@ -133,19 +133,18 @@ export default function PostPage() {
 
           {notation === 'western' && (
             <div className="min-h-[40rem]">
-              {sheetUrl && <OSMDWrapper file={sheetUrl} />}
               {sheetUrl && (
-                <div style={{ marginTop: '1rem' }}>
+                <div style={{ marginBottom: '1rem' }}>
                   <PlayerForSheet url={sheetUrl} label="Play Western Staff" source="western" />
                 </div>
               )}
+              {sheetUrl && <OSMDWrapper file={sheetUrl} />}
             </div>
           )}
           {notation === 'indian' && (
             <div className="min-h-[40rem]">
-              {sheetUrl && <IndianNotation fileUrl={sheetUrl} currentBeat={currentBeat} />}
               {sheetUrl && (
-                <div style={{ marginTop: '1rem' }}>
+                <div style={{ marginBottom: '1rem' }}>
                   <PlayerForSheet
                     url={sheetUrl}
                     label="Play Bhatkhande"
@@ -154,36 +153,42 @@ export default function PostPage() {
                   />
                 </div>
               )}
+              {sheetUrl && <IndianNotation fileUrl={sheetUrl} currentBeat={currentBeat} />}
             </div>
           )}
         </div>
       </section>
 
       {lyrics.length > 0 && (
-        <section className="container relative my-8">
+        <section
+          style={{
+            maxWidth: 800,
+            margin: '3rem auto',
+            padding: '2rem 1.5rem',
+          }}
+        >
           <h2
             style={{
-              fontSize: '1.1rem',
-              fontWeight: 600,
-              color: '#9F1239',
-              borderBottom: '1px solid #fecdd3',
-              paddingBottom: '0.4rem',
-              marginBottom: '0.75rem',
+              fontSize: '1.6rem',
+              fontWeight: 700,
+              color: '#1C1917',
+              textAlign: 'center',
+              marginBottom: '1.5rem',
+              letterSpacing: '0.5px',
             }}
           >
             Lyrics
           </h2>
           <div
             style={{
-              background: '#fff',
-              border: '1px solid #fecdd3',
-              borderRadius: 8,
-              padding: '1rem 1.25rem',
-              fontSize: '1rem',
-              lineHeight: 1.7,
+              fontSize: '24px',
+              lineHeight: 2,
               color: '#1C1917',
               whiteSpace: 'pre-wrap',
+              textAlign: 'center',
               fontFamily: '"EB Garamond", Georgia, serif',
+              maxWidth: 600,
+              margin: '0 auto',
             }}
           >
             {lyrics.join(' ')}

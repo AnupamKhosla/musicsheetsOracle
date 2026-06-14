@@ -17,7 +17,7 @@ import {
   type Language,
   type TaalDef,
 } from './sargam-data';
-import { type MidiEvent, pitchToMidi } from './midi';
+import { type MidiEvent } from './midi';
 
 export interface ParsedNote {
   step: string;
@@ -101,6 +101,11 @@ function buildKeyAlter(fifths: number): Record<string, number> {
   return out;
 }
 
+function pitchToMidi(step: string, alter: number, octave: number, keyAlter: Record<string, number>): number {
+  const totalAlter = alter + (keyAlter[step] || 0);
+  return (octave + 1) * 12 + STEP_TO_SEMITONE[step] + totalAlter;
+}
+
 function noteSemitone(n: ParsedNote, keyAlter: Record<string, number>): number {
   return STEP_TO_SEMITONE[n.step] + n.alter + (keyAlter[n.step] || 0);
 }
@@ -172,10 +177,11 @@ function processVoice(
     }
 
     const startDiv = note.isChord ? lastStartDiv : cumDiv;
-    const startBeat = Math.floor(startDiv / divsPerBeat);
+    const displayBeat = Math.floor(startDiv / divsPerBeat);
+    const midiStartBeat = startDiv / divsPerBeat;
     const endExclusiveDiv = startDiv + note.duration;
     const endBeat = Math.ceil(endExclusiveDiv / divsPerBeat) - 1;
-    const durationBeats = (endExclusiveDiv - startDiv) / divsPerBeat;
+    const midiDuration = (endExclusiveDiv - startDiv) / divsPerBeat;
 
     ensureBeats(endBeat);
 
@@ -189,20 +195,20 @@ function processVoice(
       const swaraText = swaraLabel + marker;
 
       ensureBeats(endBeat);
-      allBeats[startBeat].push(swaraText);
-      for (let b = startBeat + 1; b <= endBeat; b++) {
+      allBeats[displayBeat].push(swaraText);
+      for (let b = displayBeat + 1; b <= endBeat; b++) {
         allBeats[b].push(TIE);
       }
       tieLastDashedBeat = endBeat;
 
       const midi = pitchToMidi(note.step, note.alter, note.octave, keyAlter);
       if (note.tieStart && !note.tieStop) {
-        tieStartBeat = startBeat;
+        tieStartBeat = displayBeat;
         tieMidiStartDiv = startDiv;
         tieMidiDuration = note.duration;
         tieMidiPitch = midi;
       } else {
-        midiEvents.push({ midi, startBeat, durationBeats });
+        midiEvents.push({ midi, startBeat: midiStartBeat, durationBeats: midiDuration });
       }
     }
 
