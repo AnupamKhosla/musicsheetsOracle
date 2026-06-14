@@ -73,6 +73,35 @@
     font-weight: 500;
 }
 
+.bhatkhande-controls {
+    @apply px-6 py-3 flex flex-wrap items-center gap-4;
+    border-bottom: 1px solid rgba(225, 29, 72, 0.08);
+    background: rgba(225, 29, 72, 0.015);
+
+    label {
+        @apply flex items-center text-sm;
+        color: #9F1239;
+        font-weight: 500;
+    }
+
+    select {
+        @apply px-3 py-1.5 rounded-md text-sm;
+        border: 1px solid rgba(225, 29, 72, 0.2);
+        background: white;
+        color: #1C1917;
+        font-family: "Noto Sans Devanagari", "Devanagari Sangam MN", "Arial Unicode MS", sans-serif;
+        cursor: pointer;
+
+        &:hover {
+            border-color: rgba(225, 29, 72, 0.4);
+        }
+
+        &:focus {
+            @apply outline-none ring-2 ring-rose-300;
+        }
+    }
+}
+
 .bhatkhande-scroll {
     @apply overflow-x-auto;
 }

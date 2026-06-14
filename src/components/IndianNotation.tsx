@@ -1,31 +1,95 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { convertToBhatkhande, ParsedNote, NotationData } from '@/lib/bhatkhande';
+import type { Language } from '@/lib/sargam-data';
+import { RAGA_LABELS } from '@/lib/sargam-data';
 
-const STEP_TO_SEMITONE: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
-const SHARPS = ['F', 'C', 'G', 'D', 'A', 'E', 'B'];
-const FLATS = ['B', 'E', 'A', 'D', 'G', 'C', 'F'];
+function extractNotesFromDoc(doc: Document) {
+  const firstPart = doc.querySelector('score-partwise > part') || doc.querySelector('part');
+  if (!firstPart) throw new Error('No <part> elements found in MusicXML');
 
-const SWARA_NAMES: Record<number, { shuddh: string; komal?: string }> = {
-  0: { shuddh: '\u0938\u093E' },
-  1: { shuddh: '\u0930\u0947', komal: '\u0930\u0947\u0332' },
-  2: { shuddh: '\u0930\u0947' },
-  3: { shuddh: '\u0917', komal: '\u0917\u0332' },
-  4: { shuddh: '\u0917' },
-  5: { shuddh: '\u092E' },
-  6: { shuddh: '\u092E\u0951' },
-  7: { shuddh: '\u092A' },
-  8: { shuddh: '\u0927', komal: '\u0927\u0332' },
-  9: { shuddh: '\u0927' },
-  10: { shuddh: '\u0928\u093F', komal: '\u0928\u093F\u0332' },
-  11: { shuddh: '\u0928\u093F' },
-};
+  const firstMeasure = firstPart.querySelector('measure');
+  if (!firstMeasure) throw new Error('No <measure> elements found in first part');
 
-const HINDI_NUMS = ['\u0967','\u0968','\u0969','\u096A','\u096B','\u096C','\u096D','\u096E','\u096F','\u0967\u0966','\u0967\u0967','\u0967\u0968','\u0967\u0969','\u0967\u096A','\u0967\u096B','\u0967\u096C'];
-const MADHYAM_OCTAVE = 4;
+  const attrs = firstMeasure.querySelector('attributes');
+  const keyEl = attrs?.querySelector('key');
+  const fifths = keyEl ? parseInt(keyEl.querySelector('fifths')?.textContent || '0') : 0;
+  const mode = keyEl?.querySelector('mode')?.textContent || 'major';
 
-export default function IndianNotation({ fileUrl }: { fileUrl: string }) {
-  const [data, setData] = useState<any>(null);
+  const timeEl = attrs?.querySelector('time');
+  const beats = timeEl ? parseInt(timeEl.querySelector('beats')?.textContent || '4') : 4;
+  const beatType = timeEl ? parseInt(timeEl.querySelector('beat-type')?.textContent || '4') : 4;
+
+  const divisionsEl = attrs?.querySelector('divisions');
+  const divisions = divisionsEl ? parseInt(divisionsEl.textContent || '1') : 1;
+
+  const title = doc.querySelector('work > work-title')?.textContent
+    || doc.querySelector('movement-title')?.textContent
+    || '';
+
+  const notes: ParsedNote[] = [];
+  firstPart.querySelectorAll('measure note').forEach((noteEl) => {
+    const isRest = noteEl.querySelector('rest') !== null;
+    const duration = parseInt(noteEl.querySelector('duration')?.textContent || '0');
+    let step = '';
+    let alter = 0;
+    let octave = 4;
+    if (!isRest) {
+      const pitch = noteEl.querySelector('pitch');
+      if (pitch) {
+        step = pitch.querySelector('step')?.textContent || '';
+        alter = parseInt(pitch.querySelector('alter')?.textContent || '0');
+        octave = parseInt(pitch.querySelector('octave')?.textContent || '4');
+      }
+    }
+    const isChord = noteEl.querySelector('chord') !== null;
+    const voice = noteEl.querySelector('voice')?.textContent || '1';
+    const tieStart = noteEl.querySelector('tie[type="start"]') !== null;
+    const tieStop = noteEl.querySelector('tie[type="stop"]') !== null;
+    notes.push({ step, alter, octave, duration, voice, isChord, isRest, tieStart, tieStop });
+  });
+
+  return {
+    key: { fifths, mode },
+    time: { beats, beatType },
+    divisions,
+    title,
+    notes,
+  };
+}
+
+// Heuristic: suggest a parent thaat (10-thaat system) from a Western key sig.
+//   major  → bilawal  (Ionian = all shuddh, all standard major keys)
+//   minor  → kafi when |fifths| is 1 or 2 (komal ga + komal dha)
+//          → asavari otherwise (3 komal swaras: ga, dha, ni)
+function suggestThaat(fifths: number, mode: string): string | null {
+  if (mode === 'major') return 'bilawal';
+  if (mode === 'minor') {
+    const abs = Math.abs(fifths);
+    if (abs === 1 || abs === 2) return 'kafi';
+    return 'asavari';
+  }
+  return null;
+}
+
+export default function IndianNotation({
+  fileUrl,
+  language: languageProp,
+}: {
+  fileUrl: string;
+  language?: Language;
+}) {
+  const [parsed, setParsed] = useState<{
+    key: { fifths: number; mode: string };
+    time: { beats: number; beatType: number };
+    divisions: number;
+    title: string;
+    notes: ParsedNote[];
+  } | null>(null);
+  const [internalLanguage, setInternalLanguage] = useState<Language>('hindi');
+  const language = languageProp ?? internalLanguage;
+  const controlsHidden = languageProp !== undefined;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,146 +97,105 @@ export default function IndianNotation({ fileUrl }: { fileUrl: string }) {
     if (!fileUrl) return;
     setLoading(true);
     setError(null);
+
     fetch(fileUrl)
-      .then(r => r.text())
-      .then(xmlText => {
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status} fetching ${fileUrl}`);
+        return r.text();
+      })
+      .then((xmlText) => {
         const parser = new DOMParser();
         const doc = parser.parseFromString(xmlText, 'application/xml');
         const errNode = doc.querySelector('parsererror');
         if (errNode) throw new Error('Invalid MusicXML: ' + errNode.textContent);
-        const result = parseMusicXML(doc);
-        setData(result);
+        setParsed(extractNotesFromDoc(doc));
         setLoading(false);
       })
-      .catch(e => { setError(e.message); setLoading(false); });
+      .catch((e) => {
+        setError(e.message);
+        setLoading(false);
+      });
   }, [fileUrl]);
 
   if (loading) return <div className="p-8 text-center text-gray-500">Notation loading…</div>;
   if (error) return <div className="p-8 text-center text-red-600">Notation error: {error}</div>;
-  if (!data || data.rows.length === 0) return null;
+  if (!parsed) return null;
+
+  const data: NotationData = convertToBhatkhande({ ...parsed, language });
+  const thaatSuggestion = suggestThaat(parsed.key.fifths, parsed.key.mode);
+  const thaatLabel = thaatSuggestion
+    ? (RAGA_LABELS[language][thaatSuggestion] || thaatSuggestion)
+    : null;
 
   return (
-    <div>
-      <div className="bhatkhande-notice">⚠ Experimental — may contain translation errors</div>
-      <div className="bhatkhande-notation">
-        <div className="bhatkhande-header">
-          {data.title && <span className="bhatkhande-title">{data.title}</span>}
-          <span className="bhatkhande-info">
-            {data.raga && <>Raga: {data.raga} &nbsp;</>}
-            Tal: {data.beatType}/{data.beats} &nbsp;·&nbsp; Sa = {data.saName}
-          </span>
-        </div>
-        <div className="bhatkhande-scroll">
-          <table className="bhatkhande-grid">
-            <thead>
-              <tr className="bhatkhande-beat-row">
-                {data.beatMarks.map((mark: string, i: number) => (
-                  <td key={i} className={`bhatkhande-beat-cell ${mark === '\u0938\u092E' ? 'bhatkhande-sam' : ''}`}>{mark}</td>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.rows.map((row: any, ri: number) => (
-                <tr key={ri} className="bhatkhande-swar-row">
-                  {row.cells.map((cell: any, ci: number) => (
-                    <td key={ci} className={`bhatkhande-swar-cell ${cell === '\u00B7' ? 'bhatkhande-rest' : ''}`}>
-                      {Array.isArray(cell) ? cell.join(' ') : cell}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+    <div className="bhatkhande-notation">
+      <div className="bhatkhande-notice">
+        Auto-generated from MusicXML. Tonal center, octave mapping, and thaat are
+        inferred from the key signature — verify for accuracy before performance use.
       </div>
+
+      {!controlsHidden && (
+        <div className="bhatkhande-controls">
+          <label>
+            Script:&nbsp;
+            <select value={language} onChange={(e) => setInternalLanguage(e.target.value as Language)}>
+              <option value="hindi">हिन्दी (Hindi)</option>
+              <option value="english">English</option>
+              <option value="bangla">বাংলা (Bangla)</option>
+            </select>
+          </label>
+        </div>
+      )}
+
+      <div className="bhatkhande-header">
+        {data.title && <span className="bhatkhande-title">{data.title}</span>}
+        <span className="bhatkhande-info">
+          Tal: {data.taalNameLabel} ({data.beats}/{data.beatType})
+          {thaatLabel && <> · Thaat: {thaatLabel}</>}
+          &nbsp;·&nbsp; Sa = {data.saName} (oct {data.saOctave})
+        </span>
+      </div>
+
+      <div className="bhatkhande-scroll">
+        <table className="bhatkhande-grid">
+          <tbody>
+            {data.rows.map((row, ri) => (
+              <RowWithHeader key={ri} beatMarks={row.beatMarks} cells={row.cells} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {data.rows.length === 0 && (
+        <div className="p-4 text-center text-gray-500">No notes to display.</div>
+      )}
     </div>
   );
 }
 
-function parseMusicXML(doc: Document) {
-  const keyEl = doc.querySelector('key');
-  const fifths = keyEl ? parseInt(keyEl.querySelector('fifths')?.textContent || '0') : 0;
-  const modeEl = keyEl?.querySelector('mode');
-  const mode = modeEl ? modeEl.textContent : 'major';
-  let saSemitone = ((fifths * 7) + 120) % 12;
-  if (mode === 'minor' || mode === 'none') saSemitone = (saSemitone + 9) % 12;
-
-  const keyAlter: Record<string, number> = {};
-  if (fifths > 0) for (let i = 0; i < fifths; i++) keyAlter[SHARPS[i]] = 1;
-  if (fifths < 0) for (let i = 0; i < Math.abs(fifths); i++) keyAlter[FLATS[i]] = -1;
-
-  const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-  const saName = NOTE_NAMES[saSemitone];
-  const titleEl = doc.querySelector('movement-title');
-  const title = titleEl?.textContent || '';
-  const timeEl = doc.querySelector('time');
-  const beats = timeEl ? parseInt(timeEl.querySelector('beats')?.textContent || '4') : 4;
-  const beatType = timeEl ? parseInt(timeEl.querySelector('beat-type')?.textContent || '4') : 4;
-
-  const firstAttr = doc.querySelector('attributes');
-  const divEl = firstAttr?.querySelector('divisions');
-  const divisions = divEl ? parseInt(divEl.textContent!) : 1;
-  const divsPerBeat = divisions * (4 / beatType);
-
-  const allBeats: string[][] = [];
-  let globalBeatIdx = 0;
-
-  const parts = doc.querySelectorAll('part');
-  parts.forEach(part => {
-    part.querySelectorAll('measure').forEach(measure => {
-      const notes = measure.querySelectorAll('note');
-      let cumDiv = 0;
-      notes.forEach(note => {
-        const rest = note.querySelector('rest');
-        const duration = parseInt(note.querySelector('duration')?.textContent || '0');
-        if (duration <= 0) return;
-        const startBeat = Math.floor(cumDiv / divsPerBeat);
-        const endExclusiveDiv = cumDiv + duration;
-        const endBeat = Math.ceil(endExclusiveDiv / divsPerBeat) - 1;
-        while (allBeats.length <= globalBeatIdx + endBeat) allBeats.push([]);
-        if (!rest) {
-          const pitch = note.querySelector('pitch');
-          if (!pitch) { cumDiv += duration; return; }
-          const step = pitch.querySelector('step')?.textContent;
-          const alterEl = pitch.querySelector('alter');
-          const explicitAlter = alterEl ? parseInt(alterEl.textContent!) : 0;
-          const octave = parseInt(pitch.querySelector('octave')?.textContent || '4');
-          if (!step) { cumDiv += duration; return; }
-          const totalAlter = explicitAlter + (keyAlter[step] || 0);
-          const noteSemitone = STEP_TO_SEMITONE[step] + totalAlter;
-          const semitoneFromSa = ((noteSemitone - saSemitone) + 120) % 12;
-          const swara = SWARA_NAMES[semitoneFromSa];
-          if (!swara) { cumDiv += duration; return; }
-          let swaraText = swara.komal && explicitAlter < 0 ? swara.komal : swara.shuddh;
-          const octDiff = octave - MADHYAM_OCTAVE;
-          if (octDiff >= 1) swaraText += '\u0902';
-          else if (octDiff <= -1) swaraText += '\u0323';
-          allBeats[globalBeatIdx + startBeat].push(swaraText);
-          for (let b = startBeat + 1; b <= endBeat; b++) {
-            allBeats[globalBeatIdx + b].push('\u2014');
-          }
-        }
-        cumDiv += duration;
-      });
-      const beatsConsumed = Math.ceil(cumDiv / divsPerBeat);
-      globalBeatIdx += Math.max(beatsConsumed, 1);
-    });
-  });
-
-  for (let i = 0; i < allBeats.length; i++) {
-    if (!allBeats[i] || allBeats[i].length === 0) allBeats[i] = ['\u00B7'];
-  }
-
-  const ROW_BEATS = 8;
-  const displayRows = [];
-  for (let i = 0; i < allBeats.length; i += ROW_BEATS) {
-    displayRows.push({ cells: allBeats.slice(i, i + ROW_BEATS) });
-  }
-  if (displayRows.length === 0) return { rows: [], beatMarks: [] };
-  const totalBeats = displayRows[0].cells.length;
-  const beatMarks = [];
-  for (let i = 0; i < totalBeats; i++) {
-    beatMarks.push(i === 0 ? '\u0938\u092E' : HINDI_NUMS[i]);
-  }
-  return { title, saName, saSemitone, beats, beatType, rows: displayRows, beatMarks, raga: '', tal: '', talBeats: beats };
+function RowWithHeader({ beatMarks, cells }: { beatMarks: string[]; cells: string[][] }) {
+  return (
+    <>
+      <tr className="bhatkhande-beat-row">
+        {beatMarks.map((mark, i) => (
+          <td
+            key={i}
+            className={`bhatkhande-beat-cell ${mark === '\u0938\u092E' ? 'bhatkhande-sam' : ''}`}
+          >
+            {mark}
+          </td>
+        ))}
+      </tr>
+      <tr className="bhatkhande-swar-row">
+        {cells.map((cell, i) => (
+          <td
+            key={i}
+            className={`bhatkhande-swar-cell ${cell.join('') === '\u00B7' ? 'bhatkhande-rest' : ''}`}
+          >
+            {cell}
+          </td>
+        ))}
+      </tr>
+    </>
+  );
 }
