@@ -16,6 +16,7 @@
 #   7. trap: removes lock on unexpected crash
 
 set -euo pipefail
+export TZ='Asia/Kolkata'
 
 REPO_DIR="${1:-}"
 if [ -z "$REPO_DIR" ] || [ ! -d "$REPO_DIR/.git" ]; then

@@ -18,34 +18,12 @@ function mod(n: number, m: number): number {
   return ((n % m) + m) % m;
 }
 
-function pickPrimaryVoice(notes: ParsedNote[]): string {
-  const counts: Record<string, number> = {};
-  for (const n of notes) {
-    if (n.isRest) continue;
-    const v = n.voice || '1';
-    counts[v] = (counts[v] || 0) + 1;
-  }
-  const entries = Object.entries(counts);
-  if (entries.length === 0) return '1';
-  entries.sort((a, b) => b[1] - a[1]);
-  return entries[0][0];
-}
-
-function pitchToMidi(step: string, alter: number, octave: number, keyAlter: Record<string, number>): number {
+export function pitchToMidi(step: string, alter: number, octave: number, keyAlter: Record<string, number>): number {
   const totalAlter = alter + (keyAlter[step] || 0);
   return (octave + 1) * 12 + STEP_TO_SEMITONE[step] + totalAlter;
 }
 
-// Convert a parsed score to a list of timed MIDI events on the primary voice.
-// Walks the same chord/tie semantics as the Bhatkhande converter so the audio
-// matches the swara grid exactly.
-export function extractWesternEvents(parsed: ParsedScore): MidiEvent[] {
-  const keyAlter = buildKeyAlter(parsed.key.fifths);
-  const voice = pickPrimaryVoice(parsed.notes);
-  const voiceNotes = parsed.notes.filter((n) => (n.voice || '1') === voice);
-  const divsPerBeat = parsed.divisions * (4 / parsed.time.beatType);
-  if (!Number.isFinite(divsPerBeat) || divsPerBeat <= 0) return [];
-
+function processVoiceMidi(voiceNotes: ParsedNote[], keyAlter: Record<string, number>, divsPerBeat: number): MidiEvent[] {
   const events: MidiEvent[] = [];
   let cumDiv = 0;
   let lastStartDiv = 0;
@@ -95,13 +73,31 @@ export function extractWesternEvents(parsed: ParsedScore): MidiEvent[] {
   return events;
 }
 
+// Convert a parsed score to a list of timed MIDI events from ALL voices.
+// Walks the same chord/tie semantics as the Bhatkhande converter so the audio
+// matches the swara grid exactly. Multi-voice: each voice is processed
+// independently and their events are merged so chords across voices play
+// simultaneously.
+export function extractWesternEvents(parsed: ParsedScore): MidiEvent[] {
+  const keyAlter = buildKeyAlter(parsed.key.fifths);
+  const divsPerBeat = parsed.divisions * (4 / parsed.time.beatType);
+  if (!Number.isFinite(divsPerBeat) || divsPerBeat <= 0) return [];
+
+  const voiceSet = new Set(parsed.notes.map((n) => n.voice || '1'));
+  const allEvents: MidiEvent[] = [];
+
+  for (const voice of voiceSet) {
+    const voiceNotes = parsed.notes.filter((n) => (n.voice || '1') === voice);
+    allEvents.push(...processVoiceMidi(voiceNotes, keyAlter, divsPerBeat));
+  }
+
+  return allEvents;
+}
+
 // Convert the Bhatkhande swara grid to MIDI events. Since each swara maps to
 // the same absolute pitch the Western score encodes, this returns the same
 // MIDI events as extractWesternEvents — but we expose it separately so the
 // player can be wired to either source, and so the API documents intent.
 export function extractIndianEvents(parsed: ParsedScore, _data: NotationData): MidiEvent[] {
-  // The notes are 1-to-1: the swara grid and the western events represent the
-  // same pitches, so the MIDI sequence is identical. The Indian view adds
-  // swara labels; the audio is the same.
   return extractWesternEvents(parsed);
 }

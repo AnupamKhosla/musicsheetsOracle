@@ -17,6 +17,7 @@ import {
   type Language,
   type TaalDef,
 } from './sargam-data';
+import { type MidiEvent, pitchToMidi } from './midi';
 
 export interface ParsedNote {
   step: string;
@@ -64,7 +65,9 @@ export interface NotationData {
   taal: TaalDef | null;
   taalNameLabel: string;
   rows: DisplayRow[];
-  voiceUsed: string;
+  voicesUsed: string[];
+  midiEvents: MidiEvent[];
+  chordEventCount: number;
   warnings: string[];
   language: Language;
 }
@@ -98,19 +101,6 @@ function buildKeyAlter(fifths: number): Record<string, number> {
   return out;
 }
 
-function pickPrimaryVoice(notes: ParsedNote[]): string {
-  const counts: Record<string, number> = {};
-  for (const n of notes) {
-    if (n.isRest) continue;
-    const v = n.voice || '1';
-    counts[v] = (counts[v] || 0) + 1;
-  }
-  const entries = Object.entries(counts);
-  if (entries.length === 0) return '1';
-  entries.sort((a, b) => b[1] - a[1]);
-  return entries[0][0];
-}
-
 function noteSemitone(n: ParsedNote, keyAlter: Record<string, number>): number {
   return STEP_TO_SEMITONE[n.step] + n.alter + (keyAlter[n.step] || 0);
 }
@@ -122,6 +112,112 @@ function findSaOctave(notes: ParsedNote[], saSemitone: number, keyAlter: Record<
     if (mod(ns - saSemitone, 12) === 0) return n.octave;
   }
   return 4;
+}
+
+interface VoiceResult {
+  beats: string[][];
+  midiEvents: MidiEvent[];
+}
+
+function processVoice(
+  voiceNotes: ParsedNote[],
+  labels: Record<number, string>,
+  saSemitone: number,
+  saOctave: number,
+  keyAlter: Record<string, number>,
+  divsPerBeat: number,
+): VoiceResult {
+  const allBeats: string[][] = [];
+  const midiEvents: MidiEvent[] = [];
+
+  const ensureBeats = (n: number) => {
+    while (allBeats.length <= n) allBeats.push([]);
+  };
+
+  let cumDiv = 0;
+  let lastStartDiv = 0;
+  let tieStartBeat: number | null = null;
+  let tieLastDashedBeat = -1;
+  let tieMidiStartDiv = 0;
+  let tieMidiDuration = 0;
+  let tieMidiPitch = 0;
+
+  for (const note of voiceNotes) {
+    if (note.duration <= 0) continue;
+
+    // --- tie continuation (swara grid) ---
+    if (tieStartBeat !== null) {
+      cumDiv += note.duration;
+      tieMidiDuration += note.duration;
+      const newEndBeat = Math.ceil(cumDiv / divsPerBeat) - 1;
+      ensureBeats(newEndBeat);
+      const from = Math.max(tieLastDashedBeat + 1, tieStartBeat + 1);
+      for (let b = from; b <= newEndBeat; b++) {
+        allBeats[b].push(TIE);
+      }
+      tieLastDashedBeat = newEndBeat;
+      if (note.tieStop) {
+        const startBeat = tieMidiStartDiv / divsPerBeat;
+        const endBeat = cumDiv / divsPerBeat;
+        midiEvents.push({
+          midi: tieMidiPitch,
+          startBeat,
+          durationBeats: endBeat - startBeat,
+        });
+        tieStartBeat = null;
+        tieLastDashedBeat = -1;
+      }
+      lastStartDiv = cumDiv;
+      continue;
+    }
+
+    const startDiv = note.isChord ? lastStartDiv : cumDiv;
+    const startBeat = Math.floor(startDiv / divsPerBeat);
+    const endExclusiveDiv = startDiv + note.duration;
+    const endBeat = Math.ceil(endExclusiveDiv / divsPerBeat) - 1;
+    const durationBeats = (endExclusiveDiv - startDiv) / divsPerBeat;
+
+    ensureBeats(endBeat);
+
+    if (!note.isRest && note.step) {
+      const totalAlter = note.alter + (keyAlter[note.step] || 0);
+      const ns = STEP_TO_SEMITONE[note.step] + totalAlter;
+      const semitoneFromSa = mod(ns - saSemitone, 12);
+      const swaraLabel = labels[semitoneFromSa] || labels[0];
+      const saptak = saptakForOctave(note.octave, saOctave);
+      const marker = SAPTAK_MARKERS[saptak];
+      const swaraText = swaraLabel + marker;
+
+      ensureBeats(endBeat);
+      allBeats[startBeat].push(swaraText);
+      for (let b = startBeat + 1; b <= endBeat; b++) {
+        allBeats[b].push(TIE);
+      }
+      tieLastDashedBeat = endBeat;
+
+      const midi = pitchToMidi(note.step, note.alter, note.octave, keyAlter);
+      if (note.tieStart && !note.tieStop) {
+        tieStartBeat = startBeat;
+        tieMidiStartDiv = startDiv;
+        tieMidiDuration = note.duration;
+        tieMidiPitch = midi;
+      } else {
+        midiEvents.push({ midi, startBeat, durationBeats });
+      }
+    }
+
+    if (!note.isChord) {
+      cumDiv += note.duration;
+      lastStartDiv = cumDiv;
+    }
+  }
+
+  // Fill empty beats with REST
+  for (let i = 0; i < allBeats.length; i++) {
+    if (allBeats[i].length === 0) allBeats[i] = [REST];
+  }
+
+  return { beats: allBeats, midiEvents };
 }
 
 export function convertToBhatkhande(opts: NotationOptions): NotationData {
@@ -144,14 +240,9 @@ export function convertToBhatkhande(opts: NotationOptions): NotationData {
   }
 
   const keyAlter = buildKeyAlter(key.fifths);
-  const voiceUsed = pickPrimaryVoice(notes);
-  const voiceNotes = notes.filter((n) => (n.voice || '1') === voiceUsed);
-  if (notes.length > voiceNotes.length) {
-    warnings.push(`Showing voice ${voiceUsed} only; other voices ignored.`);
-  }
 
   if (modeSource !== 'none' && key.mode) {
-    saOctave = findSaOctave(voiceNotes, saSemitone, keyAlter);
+    saOctave = findSaOctave(notes, saSemitone, keyAlter);
   }
 
   const divsPerBeat = divisions * (4 / time.beatType);
@@ -161,76 +252,41 @@ export function convertToBhatkhande(opts: NotationOptions): NotationData {
 
   const labels = SWARA_LABELS[language];
 
-  const allBeats: string[][] = [];
-  const ensureBeats = (n: number) => {
-    while (allBeats.length <= n) allBeats.push([]);
-  };
+  // Process all voices independently
+  const voiceSet = Array.from(new Set(notes.map((n) => n.voice || '1')));
+  const voiceResults: { voice: string; result: VoiceResult }[] = [];
+  const allMidiEvents: MidiEvent[] = [];
 
-  let cumDiv = 0;
-  let lastStartDiv = 0;
-  let tieStartBeat: number | null = null;
-  let tieLastDashedBeat = -1;
-
-  const pushSwara = (swaraText: string, startBeat: number, endBeat: number) => {
-    ensureBeats(endBeat);
-    allBeats[startBeat].push(swaraText);
-    for (let b = startBeat + 1; b <= endBeat; b++) {
-      allBeats[b].push(TIE);
-    }
-  };
-
-  for (const note of voiceNotes) {
-    if (note.duration <= 0) continue;
-
-    if (tieStartBeat !== null) {
-      cumDiv += note.duration;
-      const newEndBeat = Math.ceil(cumDiv / divsPerBeat) - 1;
-      ensureBeats(newEndBeat);
-      const from = Math.max(tieLastDashedBeat + 1, tieStartBeat + 1);
-      for (let b = from; b <= newEndBeat; b++) {
-        allBeats[b].push(TIE);
-      }
-      tieLastDashedBeat = newEndBeat;
-      if (note.tieStop) {
-        tieStartBeat = null;
-        tieLastDashedBeat = -1;
-      }
-      lastStartDiv = cumDiv;
-      continue;
-    }
-
-    const startDiv = note.isChord ? lastStartDiv : cumDiv;
-    const startBeat = Math.floor(startDiv / divsPerBeat);
-    const endExclusiveDiv = startDiv + note.duration;
-    const endBeat = Math.ceil(endExclusiveDiv / divsPerBeat) - 1;
-
-    ensureBeats(endBeat);
-
-    if (!note.isRest && note.step) {
-      const totalAlter = note.alter + (keyAlter[note.step] || 0);
-      const ns = STEP_TO_SEMITONE[note.step] + totalAlter;
-      const semitoneFromSa = mod(ns - saSemitone, 12);
-      const swaraLabel = labels[semitoneFromSa] || labels[0];
-      const saptak = saptakForOctave(note.octave, saOctave);
-      const marker = SAPTAK_MARKERS[saptak];
-      const swaraText = swaraLabel + marker;
-      pushSwara(swaraText, startBeat, endBeat);
-      tieLastDashedBeat = endBeat;
-    }
-
-    if (note.tieStart && !note.tieStop) {
-      tieStartBeat = startBeat;
-    }
-
-    if (!note.isChord) {
-      cumDiv += note.duration;
-      lastStartDiv = cumDiv;
-    }
+  for (const voice of voiceSet) {
+    const voiceNotes = notes.filter((n) => (n.voice || '1') === voice);
+    const result = processVoice(voiceNotes, labels, saSemitone, saOctave, keyAlter, divsPerBeat);
+    voiceResults.push({ voice, result });
+    allMidiEvents.push(...result.midiEvents);
   }
 
-  for (let i = 0; i < allBeats.length; i++) {
+  // Merge per-voice beats by beat index
+  const maxBeats = voiceResults.reduce((m, v) => Math.max(m, v.result.beats.length), 0);
+  const allBeats: string[][] = [];
+  for (let i = 0; i < maxBeats; i++) {
+    allBeats[i] = [];
+    for (const { result } of voiceResults) {
+      if (i < result.beats.length) {
+        for (const swara of result.beats[i]) {
+          if (swara !== REST) allBeats[i].push(swara);
+        }
+      }
+    }
     if (allBeats[i].length === 0) allBeats[i] = [REST];
   }
+
+  // Chord event count: notes at beats where 2+ midi events share the same startBeat
+  const beatCounts: Record<number, number> = {};
+  for (const e of allMidiEvents) {
+    beatCounts[e.startBeat] = (beatCounts[e.startBeat] || 0) + 1;
+  }
+  const chordEventCount = Array.from(Object.values(beatCounts))
+    .filter((c) => c >= 2)
+    .reduce((a, b) => a + b, 0);
 
   const rows: DisplayRow[] = [];
   for (let i = 0; i < allBeats.length; i += ROW_BEATS) {
@@ -243,9 +299,6 @@ export function convertToBhatkhande(opts: NotationOptions): NotationData {
     rows.push({ cells, beatMarks });
   }
 
-  // Taal detection: match the time signature's total beat count. 4/4 and 3/4 are
-  // the most common Western meters and have no exact sargam-taal equivalent,
-  // so we label them generically ("4-beat") without a warning.
   const taal = findTaalByBeatCount(time.beats);
   let taalNameLabel = '';
   if (taal) {
@@ -265,7 +318,9 @@ export function convertToBhatkhande(opts: NotationOptions): NotationData {
     taal,
     taalNameLabel,
     rows,
-    voiceUsed,
+    voicesUsed: voiceSet,
+    midiEvents: allMidiEvents,
+    chordEventCount,
     warnings,
     language,
   };

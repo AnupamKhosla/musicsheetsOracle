@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import IndianNotation from '@/components/IndianNotation';
 import PlayerControls from '@/components/PlayerControls';
 import { loadMusicXmlFromUrl, parseMusicXMLString, type ParsedScore } from '@/lib/parseMusicXML';
+import { convertToBhatkhande } from '@/lib/bhatkhande';
 import { extractWesternEvents, type MidiEvent } from '@/lib/midi';
 
 const OSMDWrapper = dynamic(() => import('@/components/OSMDWrapper'), { ssr: false });
@@ -219,10 +220,9 @@ export default function PostPage() {
 // Loads MusicXML (handles .mxl zip transparently), extracts MIDI events, and
 // hands them to PlayerControls. The "source" prop determines which code path
 // derives the events:
-//   source="western" → extractWesternEvents() (direct from parsed XML).
-//   source="indian"  → same for now (see HANDOVER.md for the planned
-//                      refactor that derives events from the swara grid so
-//                      multi-voice pieces play all hands).
+//   source="western" → extractWesternEvents() (direct from parsed XML, all voices).
+//   source="indian"  → convertToBhatkhande() gives midiEvents that exactly match
+//                      the swara grid (all voices, merged beats).
 function PlayerForSheet({
   url,
   label,
@@ -242,8 +242,12 @@ function PlayerForSheet({
       .then((xml) => {
         if (cancelled) return;
         const parsed: ParsedScore = parseMusicXMLString(xml);
-        setEvents(extractWesternEvents(parsed));
-        void source; // Source currently selects label only; events come from the same MIDI extractor.
+        if (source === 'indian') {
+          const data = convertToBhatkhande({ ...parsed, language: 'hindi' });
+          setEvents(data.midiEvents.length > 0 ? data.midiEvents : extractWesternEvents(parsed));
+        } else {
+          setEvents(extractWesternEvents(parsed));
+        }
       })
       .catch((e) => {
         if (!cancelled) {
