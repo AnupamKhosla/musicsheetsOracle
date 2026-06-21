@@ -135,10 +135,10 @@ export default function PostPage() {
             <div className="min-h-[40rem]">
               {sheetUrl && (
                 <div style={{ marginBottom: '1rem' }}>
-                  <PlayerForSheet url={sheetUrl} label="Play Western Staff" source="western" />
+                  <PlayerForSheet url={sheetUrl} label="Play Western Staff" source="western" onBeatChange={setCurrentBeat} />
                 </div>
               )}
-              {sheetUrl && <OSMDWrapper file={sheetUrl} />}
+              {sheetUrl && <OSMDWrapper file={sheetUrl} currentBeat={currentBeat} />}
             </div>
           )}
           {notation === 'indian' && (

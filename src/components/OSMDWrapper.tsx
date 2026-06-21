@@ -7,11 +7,16 @@ interface Props {
   file: string;
   autoResize?: boolean;
   drawTitle?: boolean;
+  /** Current playback beat (0-based). -1 = not playing / reset highlight. */
+  currentBeat?: number;
 }
 
 export default class OSMDWrapper extends Component<Props> {
   private osmd: any = undefined;
   private divRef = createRef<HTMLDivElement>();
+  private timeBeatType = 4;
+  private lastBeat = -1;
+  private cursorEnabled = false;
 
   setupOsmd() {
     const options = {
@@ -27,7 +32,66 @@ export default class OSMDWrapper extends Component<Props> {
     this.osmd.load(this.props.file).then(() => {
       this.osmd.zoom = 0.75;
       this.osmd.render();
+      this.setupCursor();
     });
+  }
+
+  private setupCursor() {
+    try {
+      const firstMeasure = this.osmd.Sheet?.SourceMeasures?.[0];
+      const ts = firstMeasure?.ActiveTimeSignature;
+      if (ts) this.timeBeatType = ts.denominator || 4;
+
+      this.osmd.setOptions({
+        cursorsOptions: [
+          { type: 0, color: '#E11D48', alpha: 0.45, follow: true },
+        ],
+      });
+      this.osmd.enableOrDisableCursors(true);
+      this.cursorEnabled = true;
+      this.lastBeat = -1;
+    } catch {
+      // Cursor API may shift between OSMD versions; stay non-fatal.
+      this.cursorEnabled = false;
+    }
+  }
+
+  private syncCursor(beat: number) {
+    if (!this.cursorEnabled || !this.osmd?.cursor) return;
+    if (beat < 0) {
+      this.osmd.cursor.hide();
+      this.lastBeat = -1;
+      return;
+    }
+
+    const cursor = this.osmd.cursor;
+    const targetReal = beat / this.timeBeatType;
+
+    // Going backwards: reset to start and scan forward.
+    if (beat < this.lastBeat && typeof cursor.reset === 'function') {
+      cursor.reset();
+    }
+    this.lastBeat = beat;
+
+    const iter = cursor.Iterator;
+    if (!iter) return;
+
+    let safety = 0;
+    const maxSteps = 10000;
+    try {
+      while (
+        !iter.EndReached &&
+        (iter.CurrentTimestamp?.RealValue ?? 0) < targetReal &&
+        safety < maxSteps
+      ) {
+        cursor.next();
+        safety++;
+      }
+      cursor.show();
+      cursor.update();
+    } catch {
+      cursor.hide();
+    }
   }
 
   componentDidMount() {
@@ -38,10 +102,17 @@ export default class OSMDWrapper extends Component<Props> {
 
   componentDidUpdate(prevProps: Props) {
     if (this.props.file !== prevProps.file) {
+      this.cursorEnabled = false;
       this.osmd.load(this.props.file).then(() => {
         this.osmd.zoom = 0.75;
         this.osmd.render();
+        this.setupCursor();
+        if (this.props.currentBeat != null && this.props.currentBeat >= 0) {
+          this.syncCursor(this.props.currentBeat);
+        }
       });
+    } else if (this.props.currentBeat !== prevProps.currentBeat) {
+      this.syncCursor(this.props.currentBeat ?? -1);
     }
   }
 
