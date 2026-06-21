@@ -2,8 +2,8 @@
 // on its API.
 //
 // Oscillator voices (sine/triangle/square/sawtooth) use Tone.PolySynth for
-// instant playback. Real-instrument voices use Tone.Sampler with Gleitz
-// MIDI soundfonts (streamed from CDN, cached by browser).
+// instant playback. Real-instrument voices use Tone.Sampler with Salamander
+// grand-piano samples stored locally under public/sounds/piano/.
 
 import * as Tone from 'tone';
 import type { MidiEvent } from './midi';
@@ -30,14 +30,24 @@ let pianoSampler: Tone.Sampler | null = null;
 let harmoniumSynth: Tone.PolySynth | null = null;
 
 async function getPianoSampler(): Promise<Tone.PolySynth | Tone.Sampler> {
+  // Return cached sampler if it exists.  It will only be nulled out below on
+  // explicit load failure so a disposed instance is never re-used.
   if (pianoSampler) return pianoSampler;
-  // Local piano samples (downloaded from FluidR3_GM, ~73KB total)
+
   pianoSampler = new Tone.Sampler({
     urls: {
+      C3: 'C3.mp3',
+      'D#3': 'Ds3.mp3',
+      'F#3': 'Fs3.mp3',
+      A3: 'A3.mp3',
       C4: 'C4.mp3',
       'D#4': 'Ds4.mp3',
       'F#4': 'Fs4.mp3',
       A4: 'A4.mp3',
+      C5: 'C5.mp3',
+      'D#5': 'Ds5.mp3',
+      'F#5': 'Fs5.mp3',
+      A5: 'A5.mp3',
     },
     release: 1.5,
     baseUrl: '/sounds/piano/',
@@ -45,24 +55,24 @@ async function getPianoSampler(): Promise<Tone.PolySynth | Tone.Sampler> {
       console.warn('Piano sampler load error:', err);
     },
   }).toDestination();
-  
-  // Wait for load with timeout fallback
+
   try {
     await Promise.race([
       pianoSampler.loaded,
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Piano load timeout')), 5000)
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Piano load timeout')), 8000),
       ),
     ]);
   } catch (e) {
-    console.warn('Piano samples failed to load, falling back to triangle');
-    // Return triangle synth as fallback
+    console.warn('Piano samples failed to load, using synth fallback', e);
+    pianoSampler?.dispose();
+    pianoSampler = null;
     return new Tone.PolySynth(Tone.Synth, {
       oscillator: { type: 'triangle' },
-      envelope: { attack: 0.02, decay: 0.1, sustain: 0.5, release: 0.5 },
+      envelope: { attack: 0.005, decay: 0.3, sustain: 0.1, release: 1.2 },
     }).toDestination();
   }
-  
+
   return pianoSampler;
 }
 
@@ -83,11 +93,15 @@ async function getInstrument(voice: Voice): Promise<Tone.PolySynth | Tone.Sample
     return synth;
   }
   if (currentVoice === voice && synth) return synth;
-  if (synth) {
+
+  // Dispose the old synth only for oscillator voices.  Piano & harmonium
+  // are cached and reused.
+  if (synth && currentVoice && !['piano', 'harmonium'].includes(currentVoice)) {
     synth.dispose();
-    synth = null;
   }
+  synth = null;
   currentVoice = voice;
+
   if (voice === 'piano') {
     synth = await getPianoSampler();
   } else {
@@ -140,7 +154,7 @@ export async function playEvents(
   const offsetBeats = opts.offsetBeats ?? 0;
 
   // Filter events after offset and adjust their timing
-  const filteredEvents = offsetBeats > 0 
+  const filteredEvents = offsetBeats > 0
     ? events.filter(e => e.startBeat >= offsetBeats).map(e => ({
         ...e,
         startBeat: e.startBeat - offsetBeats,
@@ -159,48 +173,56 @@ export async function playEvents(
   const maxEndBeat = filteredEvents.reduce((m, e) => Math.max(m, e.startBeat + e.durationBeats), 0);
   const totalSecs = Math.max(0.5, maxEndBeat * secPerBeat + 0.5);
 
-  const startAt = Tone.now() + 0.05;
+  // ── Transport-based scheduling gives real pause/rescue ──
+  Tone.Transport.stop();
+  Tone.Transport.cancel();
+  Tone.Transport.position = 0;
+  Tone.Transport.bpm.value = bpm;
+
   for (const e of filteredEvents) {
-    const time = startAt + e.startBeat * secPerBeat;
+    const time = e.startBeat * secPerBeat;
     const dur = Math.max(0.05, e.durationBeats * secPerBeat);
-    try {
-      s.triggerAttackRelease(midiToNoteName(e.midi), dur, time);
-    } catch (err) {
-      console.warn('triggerAttackRelease failed for', e, err);
-    }
+    Tone.Transport.schedule((t) => {
+      try {
+        s.triggerAttackRelease(midiToNoteName(e.midi), dur, t);
+      } catch (err) {
+        console.warn('triggerAttackRelease failed for', e, err);
+      }
+    }, time);
   }
 
   let stopped = false;
-  let finishTimer: number | null = null;
+  let finishEvent: number | null = null;
   if (opts.onFinish) {
-    finishTimer = window.setTimeout(() => {
+    finishEvent = Tone.Transport.schedule(() => {
       if (!stopped) opts.onFinish?.();
-    }, totalSecs * 1000);
+    }, totalSecs);
   }
+
+  // Kick off transport a hair later so scheduling is settled
+  Tone.Transport.start(Tone.now() + 0.05);
 
   return {
     stop: () => {
       stopped = true;
-      if (finishTimer !== null) {
-        clearTimeout(finishTimer);
-        finishTimer = null;
+      Tone.Transport.stop();
+      if (finishEvent !== null) {
+        Tone.Transport.clear(finishEvent);
+        finishEvent = null;
       }
-      if (synth === s) {
-        synth?.dispose();
-        synth = null;
-        currentVoice = null;
-      } else {
-        s.releaseAll(0);
-      }
+      s.releaseAll();
     },
     pause: () => {
       if (stopped) return;
-      s.releaseAll(0.1);
+      Tone.Transport.pause();
+      s.releaseAll();
     },
     totalDurationMs: totalSecs * 1000,
   };
 }
 
 export async function stopAll(): Promise<void> {
+  Tone.Transport.stop();
+  Tone.Transport.cancel();
   if (synth) synth.releaseAll();
 }
