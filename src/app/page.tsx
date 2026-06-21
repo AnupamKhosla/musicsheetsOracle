@@ -1,7 +1,7 @@
 import { getDb } from '@/lib/db';
 import SearchForm from '@/components/SearchForm';
 import PostSummary from '@/components/PostSummary';
-import HomeOSMD from './HomeOSMD';
+import MusicSheetViewer from '@/components/MusicSheetViewer';
 
 export default async function HomePage() {
   const db = await getDb();
@@ -20,7 +20,7 @@ export default async function HomePage() {
       <h2 className="text-3xl font-bold mt-6 text-center">Example music sheet</h2>
       <section className="relative">
         <div className="container relative min-h-[40rem]">
-          <HomeOSMD file="sheets/chopin_op9.xml" />
+          <MusicSheetViewer fileUrl="/sheets/chopin_op9.xml" sheetName="Chopin Op. 9" />
         </div>
       </section>
 

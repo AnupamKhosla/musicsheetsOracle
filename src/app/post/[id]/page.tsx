@@ -2,29 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import dynamic from 'next/dynamic';
-import IndianNotation from '@/components/IndianNotation';
-import PlayerControls from '@/components/PlayerControls';
-import { loadMusicXmlFromUrl, parseMusicXMLString, type ParsedScore } from '@/lib/parseMusicXML';
-import { convertToBhatkhande } from '@/lib/bhatkhande';
-import { extractWesternEvents, type MidiEvent } from '@/lib/midi';
-
-const OSMDWrapper = dynamic(() => import('@/components/OSMDWrapper'), { ssr: false });
-
-const TABS = [
-  { key: 'western', label: 'Western Staff' },
-  { key: 'indian', label: 'Indian Bhatkhande' },
-];
-
-type Source = 'western' | 'indian';
+import MusicSheetViewer from '@/components/MusicSheetViewer';
+import { loadMusicXmlFromUrl, parseMusicXMLString } from '@/lib/parseMusicXML';
 
 export default function PostPage() {
   const params = useParams();
   const [post, setPost] = useState<any>({});
-  const [notation, setNotation] = useState('western');
   const [passInput, setPassInput] = useState('');
   const [error, setError] = useState('');
-  const [currentBeat, setCurrentBeat] = useState(-1);
+  const [lyrics, setLyrics] = useState<string[]>([]);
 
   useEffect(() => {
     fetch(`/api/posts/${params.id}`)
@@ -49,7 +35,6 @@ export default function PostPage() {
 
   const sheetUrl = post.sheetName ? `/sheets/${post.sheetName}.xml` : null;
   const sheetBaseName = post.sheetName || '';
-  const [lyrics, setLyrics] = useState<string[]>([]);
 
   useEffect(() => {
     if (!sheetUrl) return;
@@ -67,12 +52,6 @@ export default function PostPage() {
       cancelled = true;
     };
   }, [sheetUrl]);
-
-  // When switching tabs, drop the highlight so the previous view's
-  // "current" cell doesn't bleed into the new view.
-  useEffect(() => {
-    setCurrentBeat(-1);
-  }, [notation]);
 
   return (
     <>
@@ -100,62 +79,7 @@ export default function PostPage() {
 
       <section className="relative">
         <div className="container relative">
-          <div className="notation-tabs mt-6">
-            {TABS.map(tab => (
-              <button
-                key={tab.key}
-                className={`notation-tab ${notation === tab.key ? 'active' : ''}`}
-                onClick={() => setNotation(tab.key)}
-              >
-                {tab.key === 'western' ? (
-                  <span>
-                    <svg className="tab-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <line x1="2" y1="4" x2="14" y2="4" stroke="currentColor" strokeWidth="0.5"/>
-                      <line x1="2" y1="6" x2="14" y2="6" stroke="currentColor" strokeWidth="0.5"/>
-                      <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="0.5"/>
-                      <line x1="2" y1="10" x2="14" y2="10" stroke="currentColor" strokeWidth="0.5"/>
-                      <line x1="2" y1="12" x2="14" y2="12" stroke="currentColor" strokeWidth="0.5"/>
-                      <ellipse cx="5" cy="6" rx="1.2" ry="0.9" fill="currentColor" transform="rotate(-15 5 6)"/>
-                    </svg>
-                    <span className="tab-label">{tab.label}</span>
-                  </span>
-                ) : (
-                  <span>
-                    <svg className="tab-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <text x="1" y="13" fontSize="14" fill="currentColor" fontFamily="Noto Sans Devanagari, sans-serif">स</text>
-                    </svg>
-                    <span className="tab-label">{tab.label}</span>
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          {notation === 'western' && (
-            <div className="min-h-[40rem]">
-              {sheetUrl && (
-                <div style={{ marginBottom: '1rem' }}>
-                  <PlayerForSheet url={sheetUrl} label="Play Western Staff" source="western" onBeatChange={setCurrentBeat} />
-                </div>
-              )}
-              {sheetUrl && <OSMDWrapper file={sheetUrl} currentBeat={currentBeat} />}
-            </div>
-          )}
-          {notation === 'indian' && (
-            <div className="min-h-[40rem]">
-              {sheetUrl && (
-                <div style={{ marginBottom: '1rem' }}>
-                  <PlayerForSheet
-                    url={sheetUrl}
-                    label="Play Bhatkhande"
-                    source="indian"
-                    onBeatChange={setCurrentBeat}
-                  />
-                </div>
-              )}
-              {sheetUrl && <IndianNotation fileUrl={sheetUrl} currentBeat={currentBeat} />}
-            </div>
-          )}
+          {sheetUrl && <MusicSheetViewer fileUrl={sheetUrl} sheetName={post.sheetName} />}
         </div>
       </section>
 
@@ -220,53 +144,4 @@ export default function PostPage() {
       </form>
     </>
   );
-}
-
-// Loads MusicXML (handles .mxl zip transparently), extracts MIDI events, and
-// hands them to PlayerControls. The "source" prop determines which code path
-// derives the events:
-//   source="western" → extractWesternEvents() (direct from parsed XML, all voices).
-//   source="indian"  → convertToBhatkhande() gives midiEvents that exactly match
-//                      the swara grid (all voices, merged beats).
-function PlayerForSheet({
-  url,
-  label,
-  source,
-  onBeatChange,
-}: {
-  url: string;
-  label: string;
-  source: Source;
-  onBeatChange?: (beat: number) => void;
-}) {
-  const [events, setEvents] = useState<MidiEvent[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    loadMusicXmlFromUrl(url)
-      .then((xml) => {
-        if (cancelled) return;
-        const parsed: ParsedScore = parseMusicXMLString(xml);
-        if (source === 'indian') {
-          const data = convertToBhatkhande({ ...parsed, language: 'hindi' });
-          setEvents(data.midiEvents.length > 0 ? data.midiEvents : extractWesternEvents(parsed));
-        } else {
-          setEvents(extractWesternEvents(parsed));
-        }
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          console.error('Failed to prepare events for', url, e);
-          setEvents([]);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [url, source]);
-
-  if (events === null) {
-    return <div style={{ color: '#888', fontSize: '0.85rem' }}>Preparing playback…</div>;
-  }
-  return <PlayerControls events={events} label={label} onBeatChange={onBeatChange} />;
 }
