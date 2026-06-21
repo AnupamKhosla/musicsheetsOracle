@@ -32,7 +32,7 @@ function processVoiceMidi(voiceNotes: ParsedNote[], keyAlter: Record<string, num
   for (const note of voiceNotes) {
     if (note.duration <= 0) continue;
 
-    if (tieStart) {
+    if (tieStart && !note.isChord) {
       cumDiv += note.duration;
       tieStart.duration += note.duration;
       if (note.tieStop) {

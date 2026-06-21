@@ -145,6 +145,7 @@ function processVoice(
   let lastDisplayBeat = -1;
   let tieStartBeat: number | null = null;
   let tieLastDashedBeat = -1;
+  let tieSubrowIdx = 0;
   let tieMidiStartDiv = 0;
   let tieMidiDuration = 0;
   let tieMidiPitch = 0;
@@ -153,15 +154,20 @@ function processVoice(
     if (note.duration <= 0) continue;
 
     // --- tie continuation (swara grid) ---
-    if (tieStartBeat !== null) {
+    // Gate on !note.isChord: a <chord/> note is a different simultaneous
+    // pitch, not a continuation of the tied note. Without this gate the
+    // chord's duration was being consumed by the tie branch, shifting
+    // later MIDI events and dropping the chord's swara from the grid.
+    if (tieStartBeat !== null && !note.isChord) {
       cumDiv += note.duration;
       tieMidiDuration += note.duration;
       const newEndBeat = Math.ceil(cumDiv / divsPerBeat) - 1;
       ensureBeats(newEndBeat);
       const from = Math.max(tieLastDashedBeat + 1, tieStartBeat + 1);
       for (let b = from; b <= newEndBeat; b++) {
-        if (allBeats[b].length === 0) allBeats[b] = [[TIE]];
-        else allBeats[b][0].push(TIE);
+        ensureBeats(b);
+        while (allBeats[b].length <= tieSubrowIdx) allBeats[b].push([]);
+        allBeats[b][tieSubrowIdx].push(TIE);
       }
       tieLastDashedBeat = newEndBeat;
       if (note.tieStop) {
@@ -210,18 +216,23 @@ function processVoice(
       } else {
         allBeats[displayBeat][allBeats[displayBeat].length - 1].push(swaraText);
       }
+      // Remember which sub-row this note lives in so tie dashes (em-dashes
+      // for held notes) go to the right sub-row, not just the last one in
+      // the cell.
+      const noteSubrowIdx = allBeats[displayBeat].length - 1;
 
       // Tie continuations for longer notes
       for (let b = displayBeat + 1; b <= endBeat; b++) {
         ensureBeats(b);
-        if (allBeats[b].length === 0) allBeats[b] = [[TIE]];
-        else allBeats[b][allBeats[b].length - 1].push(TIE);
+        while (allBeats[b].length <= noteSubrowIdx) allBeats[b].push([]);
+        allBeats[b][noteSubrowIdx].push(TIE);
       }
       tieLastDashedBeat = endBeat;
 
       const midi = pitchToMidi(note.step, note.alter, note.octave, keyAlter);
       if (note.tieStart && !note.tieStop) {
         tieStartBeat = displayBeat;
+        tieSubrowIdx = noteSubrowIdx;
         tieMidiStartDiv = startDiv;
         tieMidiDuration = note.duration;
         tieMidiPitch = midi;
