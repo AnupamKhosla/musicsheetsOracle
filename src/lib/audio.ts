@@ -29,20 +29,40 @@ let currentVoice: Voice | null = null;
 let pianoSampler: Tone.Sampler | null = null;
 let harmoniumSynth: Tone.PolySynth | null = null;
 
-async function getPianoSampler(): Promise<Tone.Sampler> {
+async function getPianoSampler(): Promise<Tone.PolySynth | Tone.Sampler> {
   if (pianoSampler) return pianoSampler;
   // Local piano samples (downloaded from FluidR3_GM, ~73KB total)
   pianoSampler = new Tone.Sampler({
     urls: {
-      'C4': 'C4.mp3',
+      C4: 'C4.mp3',
       'D#4': 'Ds4.mp3',
       'F#4': 'Fs4.mp3',
-      'A4': 'A4.mp3',
+      A4: 'A4.mp3',
     },
     release: 1.5,
     baseUrl: '/sounds/piano/',
+    onerror: (err: any) => {
+      console.warn('Piano sampler load error:', err);
+    },
   }).toDestination();
-  await pianoSampler.loaded;
+  
+  // Wait for load with timeout fallback
+  try {
+    await Promise.race([
+      pianoSampler.loaded,
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Piano load timeout')), 5000)
+      ),
+    ]);
+  } catch (e) {
+    console.warn('Piano samples failed to load, falling back to triangle');
+    // Return triangle synth as fallback
+    return new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'triangle' },
+      envelope: { attack: 0.02, decay: 0.1, sustain: 0.5, release: 0.5 },
+    }).toDestination();
+  }
+  
   return pianoSampler;
 }
 
@@ -91,6 +111,8 @@ export interface PlaybackOptions {
   bpm?: number;
   voice?: Voice;
   onFinish?: () => void;
+  /** Start playback from this beat offset (for resume after pause). */
+  offsetBeats?: number;
 }
 
 export interface PlaybackHandle {
@@ -115,12 +137,30 @@ export async function playEvents(
 
   const bpm = opts.bpm ?? DEFAULT_BPM;
   const secPerBeat = 60 / bpm;
+  const offsetBeats = opts.offsetBeats ?? 0;
 
-  const maxEndBeat = events.reduce((m, e) => Math.max(m, e.startBeat + e.durationBeats), 0);
+  // Filter events after offset and adjust their timing
+  const filteredEvents = offsetBeats > 0 
+    ? events.filter(e => e.startBeat >= offsetBeats).map(e => ({
+        ...e,
+        startBeat: e.startBeat - offsetBeats,
+      }))
+    : events;
+
+  if (filteredEvents.length === 0) {
+    opts.onFinish?.();
+    return {
+      stop: () => {},
+      pause: () => {},
+      totalDurationMs: 0,
+    };
+  }
+
+  const maxEndBeat = filteredEvents.reduce((m, e) => Math.max(m, e.startBeat + e.durationBeats), 0);
   const totalSecs = Math.max(0.5, maxEndBeat * secPerBeat + 0.5);
 
   const startAt = Tone.now() + 0.05;
-  for (const e of events) {
+  for (const e of filteredEvents) {
     const time = startAt + e.startBeat * secPerBeat;
     const dur = Math.max(0.05, e.durationBeats * secPerBeat);
     try {

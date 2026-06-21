@@ -24,7 +24,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="relative">
+      <section className="relative mt-12">
         <div className="container relative">
           <h3 className="text-2xl font-bold text-center">Latest music sheets</h3>
           <div className="grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 mt-8 gap-[30px]">

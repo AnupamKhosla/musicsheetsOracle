@@ -29,13 +29,14 @@ export default function PlayerControls({
   voice = 'triangle',
   onBeatChange,
 }: PlayerControlsProps) {
-  const [state, setState] = useState<'idle' | 'loading' | 'playing' | 'done'>('idle');
+  const [state, setState] = useState<'idle' | 'loading' | 'playing' | 'paused' | 'done'>('idle');
   const [bpm, setBpm] = useState<number>(defaultBpm);
   const [selectedVoice, setSelectedVoice] = useState<Voice>(voice);
   const handleRef = useRef<PlaybackHandle | null>(null);
   const animRef = useRef<number | null>(null);
   const startTimeRef = useRef<number>(0);
   const bpmRef = useRef<number>(defaultBpm);
+  const pausePositionRef = useRef<number>(0); // beat position when paused
 
   useEffect(() => {
     return () => {
@@ -75,6 +76,31 @@ export default function PlayerControls({
 
   const play = async () => {
     if (events.length === 0) return;
+    if (state === 'paused') {
+      // Resume from pause - pass offset to audio
+      setState('playing');
+      const resumeOffset = pausePositionRef.current;
+      startTimeRef.current = performance.now() - (resumeOffset * 60 / bpm);
+      
+      // Restart audio from pause position
+      handleRef.current = await playEvents(events, {
+        bpm,
+        voice: selectedVoice,
+        offsetBeats: resumeOffset,
+        onFinish: () => {
+          handleRef.current = null;
+          pausePositionRef.current = 0;
+          setState('done');
+          stopBeatTracking();
+        },
+      });
+      
+      // Restart beat tracking
+      startBeatTracking();
+      return;
+    }
+    
+    // Fresh start
     setState('loading');
     try {
       await preloadSamples(selectedVoice);
@@ -84,6 +110,7 @@ export default function PlayerControls({
         voice: selectedVoice,
         onFinish: () => {
           handleRef.current = null;
+          pausePositionRef.current = 0;
           setState('done');
           stopBeatTracking();
         },
@@ -97,9 +124,19 @@ export default function PlayerControls({
     }
   };
 
+  const pause = () => {
+    if (state !== 'playing') return;
+    const elapsedSec = (performance.now() - startTimeRef.current) / 1000;
+    pausePositionRef.current = elapsedSec * (bpm / 60);
+    handleRef.current?.pause();
+    setState('paused');
+    stopBeatTracking();
+  };
+
   const stop = () => {
     handleRef.current?.stop();
     handleRef.current = null;
+    pausePositionRef.current = 0;
     setState('idle');
     stopBeatTracking();
   };
@@ -125,10 +162,16 @@ export default function PlayerControls({
         <span style={{ color: '#9F1239' }}>Starting…</span>
       )}
       {state === 'playing' && (
-        <button onClick={stop} style={btnDanger}>■ Stop</button>
+        <button onClick={pause} style={btnPrimary}>⏸ Pause</button>
+      )}
+      {state === 'paused' && (
+        <button onClick={play} style={btnPrimary}>▶ Resume</button>
       )}
       {state === 'done' && (
         <button onClick={play} style={btnPrimary}>↻ Replay</button>
+      )}
+      {(state === 'playing' || state === 'paused') && (
+        <button onClick={stop} style={btnDanger}>⏹ Stop</button>
       )}
       <label style={{ display: 'flex', alignItems: 'center', color: '#9F1239' }}>
         Voice:&nbsp;
