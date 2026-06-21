@@ -229,6 +229,28 @@ moving during playback. Can read its approach without depending on it.
 
 ---
 
+## 5. UX improvements (requested)
+
+### Auto-scroll Bhatkhande grid on small screens
+
+When highlighter (`bhatkhande-current`) moves right during playback, the
+scrollable container (`.bhatkhande-scroll`) should auto-scroll to keep the
+current beat cell visible. Behavior:
+
+- On each `currentBeat` change, find the highlighted cell's DOM element
+- If cell is beyond viewport right edge, scroll container right so cell
+  is at left edge (or as close as possible)
+- If already at max scroll, no-op (don't fight user's manual scroll)
+
+Implementation: `useRef` on `.bhatkhande-scroll`, `useEffect` on
+`currentBeat`, `element.scrollIntoView({inline: 'start', behavior: 'smooth'})`
+or manual `container.scrollLeft = cell.offsetLeft - containerPadding`.
+
+Priority: high (mobile usability). Files: `IndianNotation.tsx`,
+`_bhatkhande.scss` (ensure overflow-x: auto is set).
+
+---
+
 ## 5. Files referenced
 
 - `src/lib/bhatkhande.ts` — converter (bugs 1, 2, 3, 5, 6)

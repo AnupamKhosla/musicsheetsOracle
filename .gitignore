@@ -14,3 +14,7 @@ frontend/build/*
 ops/deploy-lock
 ops/deploy-logs.html
 next-env.d.ts
+
+# Public domain sheet music (not committed)
+public-sheets/
+
