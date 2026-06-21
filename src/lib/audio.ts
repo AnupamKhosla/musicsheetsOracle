@@ -10,14 +10,14 @@ import type { MidiEvent } from './midi';
 
 const DEFAULT_BPM = 90;
 
-export type Voice = 'sine' | 'triangle' | 'square' | 'sawtooth' | 'piano';
+export type Voice = 'sine' | 'triangle' | 'square' | 'sawtooth' | 'piano' | 'harmonium';
 
 interface VoiceParams {
   oscType: OscillatorType;
   envelope: { attack: number; decay: number; sustain: number; release: number };
 }
 
-const VOICE_PARAMS: Record<Exclude<Voice, 'piano'>, VoiceParams> = {
+const VOICE_PARAMS: Record<Exclude<Voice, 'piano' | 'harmonium'>, VoiceParams> = {
   sine:     { oscType: 'sine',     envelope: { attack: 0.02, decay: 0.1, sustain: 0.6, release: 0.4 } },
   triangle: { oscType: 'triangle', envelope: { attack: 0.02, decay: 0.1, sustain: 0.5, release: 0.5 } },
   square:   { oscType: 'square',   envelope: { attack: 0.005, decay: 0.05, sustain: 0.4, release: 0.2 } },
@@ -27,6 +27,7 @@ const VOICE_PARAMS: Record<Exclude<Voice, 'piano'>, VoiceParams> = {
 let synth: Tone.PolySynth | Tone.Sampler | null = null;
 let currentVoice: Voice | null = null;
 let pianoSampler: Tone.Sampler | null = null;
+let harmoniumSynth: Tone.PolySynth | null = null;
 
 async function getPianoSampler(): Promise<Tone.Sampler> {
   if (pianoSampler) return pianoSampler;
@@ -46,6 +47,21 @@ async function getPianoSampler(): Promise<Tone.Sampler> {
 }
 
 async function getInstrument(voice: Voice): Promise<Tone.PolySynth | Tone.Sampler> {
+  if (voice === 'harmonium') {
+    if (harmoniumSynth) {
+      synth = harmoniumSynth;
+      currentVoice = voice;
+      return synth;
+    }
+    // Harmonium: reed organ approximation — sawtooth, slow attack, long release
+    harmoniumSynth = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'sawtooth' },
+      envelope: { attack: 0.15, decay: 0.2, sustain: 0.7, release: 0.8 },
+    }).toDestination();
+    synth = harmoniumSynth;
+    currentVoice = voice;
+    return synth;
+  }
   if (currentVoice === voice && synth) return synth;
   if (synth) {
     synth.dispose();

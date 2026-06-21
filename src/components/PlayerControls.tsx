@@ -19,6 +19,7 @@ const VOICE_LABELS: Record<Voice, string> = {
   square: 'Square (8-bit)',
   sawtooth: 'Sawtooth (buzzy)',
   piano: 'Piano (real samples)',
+  harmonium: 'Harmonium (reed organ)',
 };
 
 export default function PlayerControls({
