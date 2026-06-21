@@ -70,6 +70,20 @@ function processVoiceMidi(voiceNotes: ParsedNote[], keyAlter: Record<string, num
     }
   }
 
+  // Flush any pending tie at end of voice. Same reasoning as bhatkhande.ts:
+  // a final <tie type="start"/> with no stop should still produce a MIDI
+  // event spanning the held duration.
+  if (tieStart) {
+    const startBeat = tieStart.startDiv / divsPerBeat;
+    const endBeat = cumDiv / divsPerBeat;
+    events.push({
+      midi: tieStart.midi,
+      startBeat,
+      durationBeats: endBeat - startBeat,
+    });
+    tieStart = null;
+  }
+
   return events;
 }
 

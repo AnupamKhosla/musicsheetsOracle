@@ -175,6 +175,10 @@ function processVoice(
         tieStartBeat = null;
         tieLastDashedBeat = -1;
       }
+      // Keep lastDisplayBeat in sync with the tie's position so the next
+      // pitch note starts a fresh sub-row instead of being incorrectly
+      // merged into the pre-tie sub-row.
+      lastDisplayBeat = newEndBeat;
       lastStartDiv = cumDiv;
       continue;
     }
@@ -232,6 +236,20 @@ function processVoice(
       cumDiv += note.duration;
       lastStartDiv = cumDiv;
     }
+  }
+
+  // Flush any pending tie at end of voice. <tie type="start"/> with no
+  // matching stop (common on final held note of a piece) would otherwise
+  // drop the MIDI event entirely.
+  if (tieStartBeat !== null) {
+    const startBeat = tieMidiStartDiv / divsPerBeat;
+    const endBeat = cumDiv / divsPerBeat;
+    midiEvents.push({
+      midi: tieMidiPitch,
+      startBeat,
+      durationBeats: endBeat - startBeat,
+    });
+    tieStartBeat = null;
   }
 
   // Fill empty beats with REST
@@ -312,17 +330,22 @@ export function convertToBhatkhande(opts: NotationOptions): NotationData {
     .reduce((a, b) => a + b, 0);
 
   const rows: DisplayRow[] = [];
+  const taal = findTaalByBeatCount(time.beats);
+  const cycleBeats = taal ? taal.numBeats : null;
   for (let i = 0; i < allBeats.length; i += ROW_BEATS) {
     const cells = allBeats.slice(i, i + ROW_BEATS);
     const beatMarks = cells.map((_, j) => {
       const globalIdx = i + j;
-      if (globalIdx === 0) return SAM;
-      return HINDI_NUMS[mod(globalIdx, HINDI_NUMS.length)];
+      // Sam at beat 0 and at the start of every subsequent tala cycle.
+      // Falls back to "every 16 beats" when no taal matched (covers long
+      // non-tala pieces that previously wrapped to a misleading '1').
+      const cycleLen = cycleBeats ?? 16;
+      if (globalIdx % cycleLen === 0) return SAM;
+      return HINDI_NUMS[mod(globalIdx % cycleLen, HINDI_NUMS.length)];
     });
     rows.push({ cells, beatMarks });
   }
 
-  const taal = findTaalByBeatCount(time.beats);
   let taalNameLabel = '';
   if (taal) {
     const langTaals = TAAL_LABELS[language];
