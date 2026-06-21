@@ -18,6 +18,7 @@ const VOICE_LABELS: Record<Voice, string> = {
   triangle: 'Triangle (organ-like)',
   square: 'Square (8-bit)',
   sawtooth: 'Sawtooth (buzzy)',
+  piano: 'Piano (real samples)',
 };
 
 export default function PlayerControls({

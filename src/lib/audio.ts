@@ -1,43 +1,66 @@
 // Audio playback engine. Wraps Tone.js so the rest of the app doesn't depend
 // on its API.
 //
-// Uses Tone.PolySynth(Tone.Synth) — direct oscillator synthesis, no samples
-// to download, instant playback. A voice selector picks the oscillator type
-// (sine / triangle / square / sawtooth). Real-instrument voices (piano,
-// harmonium) will plug in here later by swapping the synth for a Sampler
-// or soundfont-player source — the rest of the API stays the same.
+// Oscillator voices (sine/triangle/square/sawtooth) use Tone.PolySynth for
+// instant playback. Real-instrument voices use Tone.Sampler with Gleitz
+// MIDI soundfonts (streamed from CDN, cached by browser).
 
 import * as Tone from 'tone';
 import type { MidiEvent } from './midi';
 
 const DEFAULT_BPM = 90;
 
-export type Voice = 'sine' | 'triangle' | 'square' | 'sawtooth';
+export type Voice = 'sine' | 'triangle' | 'square' | 'sawtooth' | 'piano';
 
 interface VoiceParams {
   oscType: OscillatorType;
   envelope: { attack: number; decay: number; sustain: number; release: number };
 }
 
-const VOICE_PARAMS: Record<Voice, VoiceParams> = {
+const VOICE_PARAMS: Record<Exclude<Voice, 'piano'>, VoiceParams> = {
   sine:     { oscType: 'sine',     envelope: { attack: 0.02, decay: 0.1, sustain: 0.6, release: 0.4 } },
   triangle: { oscType: 'triangle', envelope: { attack: 0.02, decay: 0.1, sustain: 0.5, release: 0.5 } },
   square:   { oscType: 'square',   envelope: { attack: 0.005, decay: 0.05, sustain: 0.4, release: 0.2 } },
   sawtooth: { oscType: 'sawtooth', envelope: { attack: 0.005, decay: 0.05, sustain: 0.4, release: 0.2 } },
 };
 
-let synth: Tone.PolySynth | null = null;
+let synth: Tone.PolySynth | Tone.Sampler | null = null;
 let currentVoice: Voice | null = null;
+let pianoSampler: Tone.Sampler | null = null;
 
-function getSynth(voice: Voice): Tone.PolySynth {
-  if (synth && currentVoice === voice) return synth;
-  if (synth) synth.dispose();
-  const p = VOICE_PARAMS[voice];
-  synth = new Tone.PolySynth(Tone.Synth, {
-    oscillator: { type: p.oscType },
-    envelope: p.envelope,
+async function getPianoSampler(): Promise<Tone.Sampler> {
+  if (pianoSampler) return pianoSampler;
+  // Local piano samples (downloaded from FluidR3_GM, ~73KB total)
+  pianoSampler = new Tone.Sampler({
+    urls: {
+      'C4': 'C4.mp3',
+      'D#4': 'Ds4.mp3',
+      'F#4': 'Fs4.mp3',
+      'A4': 'A4.mp3',
+    },
+    release: 1.5,
+    baseUrl: '/sounds/piano/',
   }).toDestination();
+  await pianoSampler.loaded;
+  return pianoSampler;
+}
+
+async function getInstrument(voice: Voice): Promise<Tone.PolySynth | Tone.Sampler> {
+  if (currentVoice === voice && synth) return synth;
+  if (synth) {
+    synth.dispose();
+    synth = null;
+  }
   currentVoice = voice;
+  if (voice === 'piano') {
+    synth = await getPianoSampler();
+  } else {
+    const p = VOICE_PARAMS[voice];
+    synth = new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: p.oscType },
+      envelope: p.envelope,
+    }).toDestination();
+  }
   return synth;
 }
 
@@ -60,10 +83,11 @@ export interface PlaybackHandle {
   totalDurationMs: number;
 }
 
-export async function preloadSamples(_voice: Voice = 'triangle'): Promise<void> {
-  // No-op with synth. Kept for API stability so PlayerControls can still
-  // call it the same way it would with a real sampler.
+export async function preloadSamples(voice: Voice = 'triangle'): Promise<void> {
   await Tone.start();
+  if (voice === 'piano') {
+    await getPianoSampler();
+  }
 }
 
 export async function playEvents(
@@ -71,7 +95,7 @@ export async function playEvents(
   opts: PlaybackOptions = {},
 ): Promise<PlaybackHandle> {
   await Tone.start();
-  const s = getSynth(opts.voice ?? 'triangle');
+  const s = await getInstrument(opts.voice ?? 'triangle');
 
   const bpm = opts.bpm ?? DEFAULT_BPM;
   const secPerBeat = 60 / bpm;
