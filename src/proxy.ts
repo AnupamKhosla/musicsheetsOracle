@@ -1,28 +1,34 @@
-// import type { NextRequest } from 'next/server';
-// import { html as beautify } from 'js-beautify';
-
-// export function proxy(request: NextRequest) {
-//   if (process.env.NODE_ENV !== 'development') return;
-//   if (request.headers.get('x-pretty-pass')) return;
-//
-//   const url = new URL(request.url);
-//   return fetch(url.toString(), {
-//     headers: { 'x-pretty-pass': '1' },
-//     redirect: 'follow',
-//   }).then(async res => {
-//     const ct = res.headers.get('content-type') || '';
-//     if (!ct.includes('text/html')) return res;
-//     const text = await res.text();
-//     const pretty = beautify(text, { indent_size: 2, preserve_newlines: true, max_preserve_newlines: 1 });
-//     return new Response(pretty, {
-//       status: res.status,
-//       headers: res.headers,
-//     });
-//   });
-// }
-//
-// export const matcher = /^\/((?!_next|api|favicon\.ico).*)/;
-
+import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import fs from 'node:fs';
+import path from 'node:path';
+import { isManagedPlatform } from '@/lib/platform';
 
-export function proxy(_request: NextRequest) {}
+const MAINT_FILE = path.join(process.cwd(), 'MAINTENANCE');
+
+function isMaintenance(): boolean {
+  return (
+    !isManagedPlatform() &&
+    fs.existsSync(MAINT_FILE) &&
+    fs.readFileSync(MAINT_FILE, 'utf-8').trim() === '1'
+  );
+}
+
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/_next/') ||
+    pathname === '/maintenance' ||
+    pathname === '/favicon.ico'
+  ) {
+    return NextResponse.next();
+  }
+
+  if (isMaintenance()) {
+    return NextResponse.rewrite(new URL('/maintenance', request.url));
+  }
+
+  return NextResponse.next();
+}
