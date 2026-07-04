@@ -184,7 +184,7 @@ const RAGA_COLUMNS = Array.from({ length: Math.ceil(RAGAS.length / COL_SIZE) }, 
     <ul>
       {RAGAS.slice(ci * COL_SIZE, (ci + 1) * COL_SIZE).map(([label, value]) => (
         <li key={value}>
-          <Link className="sub-menu-item" href={`/search?scaleName=${value}`}>{label}</Link>
+          <Link className="sub-menu-item" href={`/search?scaleName=${value}`} prefetch={false}>{label}</Link>
         </li>
       ))}
     </ul>
@@ -199,5 +199,5 @@ const GENRES = [
 ];
 
 const GENRE_ITEMS = GENRES.map(([label, value]) => (
-  <li key={value}><Link className="sub-menu-item" href={`/search?genre=${value}`}>{label}</Link></li>
+  <li key={value}><Link className="sub-menu-item" href={`/search?genre=${value}`} prefetch={false}>{label}</Link></li>
 ));
