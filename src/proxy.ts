@@ -5,6 +5,7 @@ import path from 'node:path';
 import { isManagedPlatform } from '@/lib/platform';
 
 const MAINT_FILE = path.join(process.cwd(), 'MAINTENANCE');
+const MAINT_HTML = path.join(process.cwd(), 'maintenance.html');
 
 function isMaintenance(): boolean {
   return (
@@ -20,14 +21,20 @@ export async function proxy(request: NextRequest) {
   if (
     pathname.startsWith('/api/') ||
     pathname.startsWith('/_next/') ||
-    pathname === '/maintenance' ||
     pathname === '/favicon.ico'
   ) {
     return NextResponse.next();
   }
 
   if (isMaintenance()) {
-    return NextResponse.rewrite(new URL('/maintenance', request.url));
+    const html = fs.existsSync(MAINT_HTML)
+      ? fs.readFileSync(MAINT_HTML, 'utf-8')
+      : '<!DOCTYPE html><html><body style="background:#0a0a0f;color:#c9d1d9;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:monospace;">musicsheets — maintenance</body></html>';
+
+    return new Response(html, {
+      status: 503,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
   }
 
   return NextResponse.next();

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>musicsheets pipeline</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0a0a0f;
+      color: #c9d1d9;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      font-family: monospace;
+    }
+
+    h1 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #58a6ff;
+      margin-bottom: 4px;
+    }
+
+    .sub {
+      color: #8b949e;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .sub .clock {
+      color: #c9d1d9;
+    }
+
+    .status {
+      color: #8b949e;
+      font-size: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status .dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #3fb950;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    #log {
+      width: 100%;
+      max-width: 820px;
+      min-height: 200px;
+      max-height: 65vh;
+      overflow-y: auto;
+      background: #0d1117;
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #d1d5db;
+    }
+
+    #log .chunk .line {
+      display: block;
+      border-left: 2px solid transparent;
+      animation: highlight 3s ease-out forwards;
+    }
+
+    @keyframes highlight {
+      0% {
+        background: rgba(88, 166, 255, 0.12);
+        border-left-color: #58a6ff;
+      }
+      100% {
+        background: transparent;
+        border-left-color: transparent;
+      }
+    }
+
+    #scroll-btn {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f2937;
+      color: #c9d1d9;
+      border: 1px solid #374151;
+      border-radius: 20px;
+      padding: 8px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: monospace;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      z-index: 10;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    #scroll-btn:hover {
+      background: #374151;
+    }
+  </style>
+</head>
+<body>
+  <h1>musicsheets pipeline</h1>
+  <p class="sub">Indian time: <span class="clock" id="clock"></span></p>
+  <p class="status"><span class="dot" id="dot"></span><span id="status-txt">Deploy in progress</span></p>
+  <pre id="log">Waiting for pipeline...</pre>
+  <button id="scroll-btn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="6 9 12 15 18 9"></polyline>
+    </svg>
+    New logs below
+  </button>
+
+  <script>
+    (function () {
+      const logEl = document.getElementById('log');
+      const clockEl = document.getElementById('clock');
+      const statusEl = document.getElementById('status-txt');
+      const dotEl = document.getElementById('dot');
+      const scrollBtn = document.getElementById('scroll-btn');
+      let prevLen = 0;
+      let reloaded = false;
+      let atBottom = true;
+
+      setInterval(function () {
+        clockEl.textContent = new Date().toLocaleTimeString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      }, 1000);
+
+      logEl.addEventListener('scroll', function () {
+        atBottom = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 60;
+        if (atBottom) scrollBtn.style.display = 'none';
+      }, { passive: true });
+
+      scrollBtn.addEventListener('click', function () {
+        logEl.scrollTop = logEl.scrollHeight;
+        atBottom = true;
+        scrollBtn.style.display = 'none';
+      });
+
+      function escapeHtml(text) {
+        return text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      }
+
+      function appendChunk(text) {
+        if (!text) return;
+        const lines = text.split('\n');
+        const chunk = document.createElement('div');
+        chunk.className = 'chunk';
+        for (let i = 0; i < lines.length; i++) {
+          const span = document.createElement('span');
+          span.className = 'line';
+          span.textContent = lines[i];
+          chunk.appendChild(span);
+          if (i < lines.length - 1) {
+            chunk.appendChild(document.createTextNode('\n'));
+          }
+        }
+        logEl.appendChild(chunk);
+      }
+
+      function fetchLogs() {
+        fetch('/api/logs?' + Date.now(), { cache: 'no-store' })
+          .then(function (res) { return res.ok ? res.text() : null; })
+          .then(function (html) {
+            if (!html || !logEl) return;
+            if (prevLen === 0) {
+              logEl.innerHTML = html;
+            } else if (html.length > prevLen) {
+              const chunkText = html.slice(prevLen);
+              appendChunk(chunkText);
+              if (atBottom) {
+                logEl.scrollTop = logEl.scrollHeight;
+                scrollBtn.style.display = 'none';
+              } else {
+                scrollBtn.style.display = 'flex';
+              }
+            }
+            prevLen = html.length;
+          })
+          .catch(function () {});
+      }
+
+      function checkDone() {
+        if (reloaded) return;
+        fetch('/api/health', { cache: 'no-store' })
+          .then(function (res) { return res.ok ? res.json() : null; })
+          .then(function (data) {
+            if (data && data.maintenance === false) {
+              reloaded = true;
+              statusEl.textContent = 'Deploy complete — reloading...';
+              dotEl.style.background = '#f0883e';
+              dotEl.style.animation = 'none';
+              setTimeout(function () {
+                window.location.reload();
+              }, 1500);
+            }
+          })
+          .catch(function () {});
+      }
+
+      fetchLogs();
+      setInterval(fetchLogs, 2000);
+      setInterval(checkDone, 8000);
+    })();
+  </script>
+</body>
+</html>
