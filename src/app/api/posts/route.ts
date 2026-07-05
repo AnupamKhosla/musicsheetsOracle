@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
-import { ObjectId } from 'mongodb';
+import { Binary, ObjectId } from 'mongodb';
 import { getDb } from '@/lib/db';
+import { compressXml } from '@/lib/compressXml';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
 
   const results = await collection
     .find(query, { sort: ['date', 'asc'] } as any)
+    .project({ xmlGz: 0, password: 0 })
     .skip((page - 1) * 6)
     .limit(6)
     .toArray();
@@ -28,7 +30,48 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const db = await getDb();
   const collection = db.collection('musicsheets');
-  let newDocument = await request.json();
-  newDocument.date = new Date();
-  return Response.json(newDocument);
+
+  const ct = request.headers.get('content-type') || '';
+
+  let sheetName = '', Artist = 'Unknown', Genres = '', scale = 'C', password = '', source = '', xmlContent = '';
+
+  if (ct.includes('multipart/form-data') || ct.includes('application/x-www-form-urlencoded')) {
+    const fd = await request.formData();
+    sheetName = (fd.get('sheetName') as string) || '';
+    Artist = (fd.get('Artist') as string) || 'Unknown';
+    Genres = (fd.get('Genres') as string) || '';
+    scale = (fd.get('scale') as string) || 'C';
+    password = (fd.get('password') as string) || '';
+    source = (fd.get('source') as string) || '';
+    const file = fd.get('file') as File | null;
+    if (file) {
+      xmlContent = await file.text();
+    }
+  } else {
+    const body = await request.json();
+    sheetName = body.sheetName || '';
+    Artist = body.Artist || 'Unknown';
+    Genres = body.Genres || '';
+    scale = body.scale || 'C';
+    password = body.password || '';
+    source = body.source || '';
+    xmlContent = body.xmlContent || '';
+  }
+
+  const doc: any = {
+    sheetName,
+    Artist,
+    Genres,
+    scale,
+    date: new Date(),
+    password,
+    source,
+  };
+
+  if (xmlContent) {
+    doc.xmlGz = new Binary(compressXml(xmlContent));
+  }
+
+  const result = await collection.insertOne(doc);
+  return Response.json({ ...doc, _id: result.insertedId.toString(), xmlGz: undefined });
 }

@@ -4,7 +4,8 @@ import { Component, createRef } from 'react';
 import { OpenSheetMusicDisplay as OSMD } from 'opensheetmusicdisplay';
 
 interface Props {
-  file: string;
+  file?: string;
+  xmlContent?: string;
   autoResize?: boolean;
   drawTitle?: boolean;
   /** Current playback beat (0-based). -1 = not playing / reset highlight. */
@@ -18,6 +19,8 @@ export default class OSMDWrapper extends Component<Props> {
   private lastBeat = -1;
   private cursorEnabled = false;
 
+  private blobUrl: string | null = null;
+
   setupOsmd() {
     const options = {
       autoResize: this.props.autoResize !== undefined ? this.props.autoResize : true,
@@ -29,7 +32,20 @@ export default class OSMDWrapper extends Component<Props> {
       drawMeasureNumbers: false,
     };
     this.osmd = new OSMD(this.divRef.current!, options);
-    this.osmd.load(this.props.file).then(() => {
+    this.loadSheet();
+  }
+
+  private xmlToBlobUrl(xml: string): string {
+    const blob = new Blob([xml], { type: 'application/xml' });
+    return URL.createObjectURL(blob);
+  }
+
+  private loadSheet() {
+    const { file, xmlContent } = this.props;
+    if (this.blobUrl) URL.revokeObjectURL(this.blobUrl);
+    const url = xmlContent ? this.xmlToBlobUrl(xmlContent) : (file || '');
+    this.blobUrl = url !== file ? url : null;
+    return this.osmd.load(url).then(() => {
       this.osmd.zoom = 0.75;
       this.osmd.render();
       this.setupCursor();
@@ -94,6 +110,10 @@ export default class OSMDWrapper extends Component<Props> {
     }
   }
 
+  componentWillUnmount() {
+    if (this.blobUrl) URL.revokeObjectURL(this.blobUrl);
+  }
+
   componentDidMount() {
     if (this.osmd === undefined) {
       this.setupOsmd();
@@ -101,12 +121,9 @@ export default class OSMDWrapper extends Component<Props> {
   }
 
   componentDidUpdate(prevProps: Props) {
-    if (this.props.file !== prevProps.file) {
+    if (this.props.file !== prevProps.file || this.props.xmlContent !== prevProps.xmlContent) {
       this.cursorEnabled = false;
-      this.osmd.load(this.props.file).then(() => {
-        this.osmd.zoom = 0.75;
-        this.osmd.render();
-        this.setupCursor();
+      this.loadSheet().then(() => {
         if (this.props.currentBeat != null && this.props.currentBeat >= 0) {
           this.syncCursor(this.props.currentBeat);
         }

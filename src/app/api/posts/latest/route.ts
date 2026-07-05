@@ -5,7 +5,7 @@ export async function GET() {
   const collection = db.collection('musicsheets');
   const results = await collection
     .aggregate([
-      { $project: { Artist: 1, sheetName: 1, Genres: 1, scale: 1, date: 1 } },
+      { $project: { Artist: 1, sheetName: 1, Genres: 1, scale: 1, date: 1, _id: 1 } },
       { $sort: { date: -1 as const } },
       { $limit: 6 },
     ])

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { ObjectId } from 'mongodb';
 import { getDb } from '@/lib/db';
+import { decompressXml } from '@/lib/compressXml';
 
 export async function GET(
   request: NextRequest,
@@ -17,7 +18,15 @@ export async function GET(
   const collection = db.collection('musicsheets');
   const result = await collection.findOne({ _id: objectId });
   if (!result) return Response.json({ error: 'Not found' }, { status: 404 });
-  return Response.json({ ...result, _id: result._id.toString() });
+
+  const { xmlGz, ...rest } = result;
+  const output: any = { ...rest, _id: result._id.toString() };
+
+  if (xmlGz) {
+    output.xmlContent = decompressXml(xmlGz.buffer);
+  }
+
+  return Response.json(output);
 }
 
 export async function DELETE(

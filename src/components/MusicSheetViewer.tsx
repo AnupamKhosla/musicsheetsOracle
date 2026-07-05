@@ -17,9 +17,11 @@ const TABS = [
 
 export default function MusicSheetViewer({
   fileUrl,
+  xmlContent,
   sheetName,
 }: {
-  fileUrl: string;
+  fileUrl?: string;
+  xmlContent?: string;
   sheetName?: string;
 }) {
   const [notation, setNotation] = useState('western');
@@ -28,9 +30,14 @@ export default function MusicSheetViewer({
   const [parsed, setParsed] = useState<ParsedScore | null>(null);
 
   useEffect(() => {
-    if (!fileUrl) return;
+    if (!fileUrl && !xmlContent) return;
     let cancelled = false;
-    loadMusicXmlFromUrl(fileUrl)
+
+    const load = xmlContent
+      ? Promise.resolve(xmlContent)
+      : loadMusicXmlFromUrl(fileUrl!);
+
+    load
       .then((xml) => {
         if (cancelled) return;
         const p = parseMusicXMLString(xml);
@@ -41,7 +48,7 @@ export default function MusicSheetViewer({
         if (!cancelled) setEvents([]);
       });
     return () => { cancelled = true; };
-  }, [fileUrl]);
+  }, [fileUrl, xmlContent]);
 
   useEffect(() => {
     setCurrentBeat(-1);
@@ -90,12 +97,12 @@ export default function MusicSheetViewer({
 
       {notation === 'western' && (
         <div className="min-h-[40rem]">
-          <OSMDWrapper file={fileUrl} currentBeat={currentBeat} />
+          <OSMDWrapper file={fileUrl} xmlContent={xmlContent} currentBeat={currentBeat} />
         </div>
       )}
       {notation === 'indian' && (
         <div className="min-h-[40rem]">
-          <IndianNotation fileUrl={fileUrl} currentBeat={currentBeat} />
+          <IndianNotation fileUrl={fileUrl} xmlContent={xmlContent} currentBeat={currentBeat} />
         </div>
       )}
     </div>

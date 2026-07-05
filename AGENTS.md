@@ -104,6 +104,7 @@ When your are openclaw find tools skills agent etc which can cross check outdate
 
 ### Coding Conventions
 - Always use modern ES module syntax (`.mjs`, `import`/`export`). Never use CommonJS (`.cjs`, `require()`).
+- Use Next.js `<Link>` for all internal navigation, never `<a>` tags.
 
 ### Memory & Context Persistence (MANDATORY)
 - **Cross-session memory**: `docs/MEMORY.md` is the persistent memory file
@@ -114,7 +115,8 @@ When your are openclaw find tools skills agent etc which can cross check outdate
 - **Rule - CHECK**: When user references "past conversations" or "you said before", check `docs/MEMORY.md` and `docs/hallucinations.md`
 
 ### Documentation
+- Project documentation (Jekyll/GitHub Pages): `docs/project/`
+- Update `docs/project/*.md` when components, routes, schema, or architecture changes
 - Deployment and implementation status: `docs/deployment.md`
 - Persistent memory and project state: `docs/MEMORY.md`
 - Known hallucinations and corrections: `docs/hallucinations.md`
-- Update docs when infrastructure, architecture, or project state changes.

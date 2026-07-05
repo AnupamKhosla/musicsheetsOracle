@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import MusicSheetViewer from '@/components/MusicSheetViewer';
-import { loadMusicXmlFromUrl, parseMusicXMLString } from '@/lib/parseMusicXML';
+import { parseMusicXMLString } from '@/lib/parseMusicXML';
 
 export default function PostPage() {
   const params = useParams();
@@ -18,7 +18,13 @@ export default function PostPage() {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
       })
-      .then(setPost)
+      .then(data => {
+        setPost(data);
+        if (data.xmlContent) {
+          const parsed = parseMusicXMLString(data.xmlContent);
+          setLyrics(parsed.lyrics);
+        }
+      })
       .catch(() => setError('Failed to load sheet'));
   }, [params.id]);
 
@@ -32,26 +38,6 @@ export default function PostPage() {
       alert('wrong password');
     }
   };
-
-  const sheetUrl = post.sheetName ? `/sheets/${post.sheetName}.xml` : null;
-  const sheetBaseName = post.sheetName || '';
-
-  useEffect(() => {
-    if (!sheetUrl) return;
-    let cancelled = false;
-    loadMusicXmlFromUrl(sheetUrl)
-      .then((xml) => {
-        if (cancelled) return;
-        const parsed = parseMusicXMLString(xml);
-        setLyrics(parsed.lyrics);
-      })
-      .catch(() => {
-        if (!cancelled) setLyrics([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [sheetUrl]);
 
   return (
     <>
@@ -79,46 +65,44 @@ export default function PostPage() {
 
       <section className="relative">
         <div className="container relative">
-          {sheetUrl && <MusicSheetViewer fileUrl={sheetUrl} sheetName={post.sheetName} />}
+          {post.xmlContent && <MusicSheetViewer xmlContent={post.xmlContent} sheetName={post.sheetName} />}
         </div>
       </section>
 
-      {lyrics.length > 0 && (
-        <section
+      <section
+        style={{
+          maxWidth: 800,
+          margin: '3rem auto',
+          padding: '2rem 1.5rem',
+        }}
+      >
+        <h2
           style={{
-            maxWidth: 800,
-            margin: '3rem auto',
-            padding: '2rem 1.5rem',
+            fontSize: '1.6rem',
+            fontWeight: 700,
+            color: '#1C1917',
+            textAlign: 'center',
+            marginBottom: '1.5rem',
+            letterSpacing: '0.5px',
           }}
         >
-          <h2
-            style={{
-              fontSize: '1.6rem',
-              fontWeight: 700,
-              color: '#1C1917',
-              textAlign: 'center',
-              marginBottom: '1.5rem',
-              letterSpacing: '0.5px',
-            }}
-          >
-            Lyrics
-          </h2>
-          <div
-            style={{
-              fontSize: '24px',
-              lineHeight: 2,
-              color: '#1C1917',
-              whiteSpace: 'pre-wrap',
-              textAlign: 'center',
-              fontFamily: '"EB Garamond", Georgia, serif',
-              maxWidth: 600,
-              margin: '0 auto',
-            }}
-          >
-            {lyrics.join(' ')}
-          </div>
-        </section>
-      )}
+          Lyrics
+        </h2>
+        <div
+          style={{
+            fontSize: '24px',
+            lineHeight: 2,
+            color: '#1C1917',
+            whiteSpace: 'pre-wrap',
+            textAlign: 'center',
+            fontFamily: '"EB Garamond", Georgia, serif',
+            maxWidth: 600,
+            margin: '0 auto',
+          }}
+        >
+          {lyrics.length > 0 ? lyrics.join(' ') : <em style={{ color: '#94a3b8' }}>No lyrics available</em>}
+        </div>
+      </section>
 
       <form onSubmit={e => { e.preventDefault(); deletePost(); }} className="container flex items-center mb-5">
         <input
@@ -134,13 +118,6 @@ export default function PostPage() {
         >
           Delete sheet
         </button>
-        <a
-          href={'/sheets/' + sheetBaseName}
-          download
-          className="text-sm py-1 px-3 inline-block tracking-wide border align-middle transition duration-500 ease-in-out text-base text-center bg-slate-600 hover:bg-slate-700 border-slate-600 hover:border-slate-700 text-white rounded-md me-2 mt-2"
-        >
-          Download
-        </a>
       </form>
     </>
   );

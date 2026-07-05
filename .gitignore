@@ -18,3 +18,12 @@ next-env.d.ts
 # Public domain sheet music (not committed)
 public-sheets/
 
+# Local maintenance flag — deploy script manages this on VPS
+MAINTENANCE
+
+# Sheet music files (migrated to MongoDB)
+public/sheets/**/*.xml
+public/sheets/**/*.musicxml
+public/sheets/**/*.mxl
+public/sheets/**/META-INF/
+

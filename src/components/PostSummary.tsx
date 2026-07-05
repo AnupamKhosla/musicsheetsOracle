@@ -27,13 +27,6 @@ export default function PostSummary(props: any) {
         >
           View sheet
         </Link>
-        <a
-          href={`/sheets/${props.sheetName}`}
-          download
-          className="text-sm py-1 px-3 inline-block tracking-wide border align-middle transition duration-500 ease-in-out text-base text-center bg-slate-600 hover:bg-slate-700 border-slate-600 hover:border-slate-700 text-white rounded-md me-2 mt-2"
-        >
-          Download
-        </a>
       </div>
     </div>
   );

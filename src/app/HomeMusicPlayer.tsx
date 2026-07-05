@@ -15,15 +15,18 @@ const TABS = [
   { key: 'indian', label: 'Indian Bhatkhande' },
 ];
 
-export default function HomeMusicPlayer({ fileUrl }: { fileUrl: string }) {
+export default function HomeMusicPlayer({ fileUrl, xmlContent }: { fileUrl?: string; xmlContent?: string }) {
   const [notation, setNotation] = useState('western');
   const [currentBeat, setCurrentBeat] = useState(-1);
   const [events, setEvents] = useState<MidiEvent[] | null>(null);
 
   useEffect(() => {
-    if (!fileUrl) return;
+    if (!fileUrl && !xmlContent) return;
     let cancelled = false;
-    loadMusicXmlFromUrl(fileUrl)
+    const load = xmlContent
+      ? Promise.resolve(xmlContent)
+      : loadMusicXmlFromUrl(fileUrl!);
+    load
       .then((xml) => {
         if (cancelled) return;
         const parsed = parseMusicXMLString(xml);
@@ -33,7 +36,7 @@ export default function HomeMusicPlayer({ fileUrl }: { fileUrl: string }) {
         if (!cancelled) setEvents([]);
       });
     return () => { cancelled = true; };
-  }, [fileUrl]);
+  }, [fileUrl, xmlContent]);
 
   useEffect(() => {
     setCurrentBeat(-1);
@@ -80,12 +83,12 @@ export default function HomeMusicPlayer({ fileUrl }: { fileUrl: string }) {
 
       {notation === 'western' && (
         <div className="min-h-[40rem]">
-          <OSMDWrapper file={fileUrl} currentBeat={currentBeat} />
+          <OSMDWrapper file={fileUrl} xmlContent={xmlContent} currentBeat={currentBeat} />
         </div>
       )}
       {notation === 'indian' && (
         <div className="min-h-[40rem]">
-          <IndianNotation fileUrl={fileUrl} currentBeat={currentBeat} />
+          <IndianNotation fileUrl={fileUrl} xmlContent={xmlContent} currentBeat={currentBeat} />
         </div>
       )}
     </div>

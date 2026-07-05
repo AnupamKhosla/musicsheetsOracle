@@ -37,4 +37,5 @@ Use `localhost:3000` for frontend dev, `localhost:5050` for backend/prod testing
 
 ---
 
-*For developers and contributors → [CONTRIBUTING.md](CONTRIBUTING.md)*
+*For developers and contributors → [CONTRIBUTING.md](CONTRIBUTING.md)*  
+*Project documentation → [docs](https://anupamkhosla.github.io/musicsheetsOracle/)*

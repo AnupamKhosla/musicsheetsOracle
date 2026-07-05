@@ -22,10 +22,12 @@ function suggestThaat(fifths: number, mode: string): string | null {
 
 export default function IndianNotation({
   fileUrl,
+  xmlContent,
   language: languageProp,
   currentBeat = -1,
 }: {
-  fileUrl: string;
+  fileUrl?: string;
+  xmlContent?: string;
   language?: Language;
   /** Current beat index (0-based, fractional). -1 = not playing. */
   currentBeat?: number;
@@ -38,12 +40,15 @@ export default function IndianNotation({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!fileUrl) return;
+    if (!fileUrl && !xmlContent) return;
     setLoading(true);
     setError(null);
 
-    fetch(fileUrl)
-      .then(() => loadMusicXmlFromUrl(fileUrl))
+    const load = xmlContent
+      ? Promise.resolve(xmlContent)
+      : loadMusicXmlFromUrl(fileUrl!);
+
+    load
       .then((xmlText) => {
         setParsed(parseMusicXMLString(xmlText));
         setLoading(false);
@@ -52,7 +57,7 @@ export default function IndianNotation({
         setError(e.message);
         setLoading(false);
       });
-  }, [fileUrl]);
+  }, [fileUrl, xmlContent]);
 
   if (loading) return <div className="p-8 text-center text-gray-500">Notation loading…</div>;
   if (error) return <div className="p-8 text-center text-red-600">Notation error: {error}</div>;

@@ -1,4 +1,6 @@
 import { getDb } from '@/lib/db';
+import { decompressXml } from '@/lib/compressXml';
+import Link from 'next/link';
 import SearchForm from '@/components/SearchForm';
 import PostSummary from '@/components/PostSummary';
 import MusicSheetViewer from '@/components/MusicSheetViewer';
@@ -7,11 +9,17 @@ export default async function HomePage() {
   const db = await getDb();
   const posts = await db.collection('musicsheets')
     .aggregate([
-      { $project: { Artist: 1, sheetName: 1, Genres: 1, scale: 1, date: 1 } },
+      { $project: { Artist: 1, sheetName: 1, Genres: 1, scale: 1, date: 1, _id: 1 } },
       { $sort: { date: -1 as const } },
       { $limit: 6 },
     ])
     .toArray();
+
+  const exampleSheet = await db.collection('musicsheets').findOne({ sheetName: 'chopin_op9' });
+  let exampleXml = '';
+  if (exampleSheet?.xmlGz) {
+    exampleXml = decompressXml(exampleSheet.xmlGz.buffer);
+  }
 
   return (
     <>
@@ -20,7 +28,7 @@ export default async function HomePage() {
       <h2 className="text-3xl font-bold mt-6 text-center">Example music sheet</h2>
       <section className="relative">
         <div className="container relative min-h-[40rem]">
-          <MusicSheetViewer fileUrl="/sheets/chopin_op9.xml" sheetName="Chopin Op. 9" />
+          {exampleXml && <MusicSheetViewer xmlContent={exampleXml} sheetName="Chopin Op. 9" />}
         </div>
       </section>
 
@@ -34,12 +42,12 @@ export default async function HomePage() {
           </div>
           <div className="grid md:grid-cols-12 grid-cols-1 mt-8 pb-8">
             <div className="md:col-span-12 text-center">
-              <a
+              <Link
                 href="/search"
                 className="relative inline-block font-semibold tracking-wide align-middle text-base text-center border-none after:content-[''] after:absolute after:h-px after:w-0 hover:after:w-full after:end-0 hover:after:end-auto after:bottom-0 after:start-0 after:transition-all after:duration-500 text-slate-400 hover:text-rose-600 after:bg-rose-600 duration-500 ease-in-out"
               >
                 See all sheets <i className="uil uil-arrow-right align-middle"></i>
-              </a>
+              </Link>
             </div>
           </div>
         </div>
