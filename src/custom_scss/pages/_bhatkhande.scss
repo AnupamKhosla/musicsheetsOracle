@@ -157,6 +157,55 @@
         margin-bottom: 1px;
     }
 
+    // Per-swara spans for meend arc / chord top bar / hold bracket rendering.
+    .bhatkhande-swara {
+        position: relative;
+        display: inline-block;
+        padding: 0 0.15em;
+
+        // ---- Meend arc ABOVE swaras: curve from this note to the next ----
+        &.bhatkhande-meend-start::before {
+            content: '';
+            position: absolute;
+            top: -0.35em;
+            left: 50%;
+            width: calc(100% + 1em + 0.3em);
+            height: 0.55em;
+            border: 1.5px solid #E11D48;
+            border-bottom: none;
+            border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+
+        // ---- Chord combo: subtle tint background only ----
+        // 2+ simultaneous Notes merged into one horizontal glyph group. A
+        // subtle tint helps the eye group them apart from neighbours. We
+        // intentionally do NOT draw a top bar — adjacent chord-rep spans
+        // would visually merge into a false "gridline" across the row.
+        &.bhatkhande-chord {
+            background: rgba(225, 29, 72, 0.10);
+            border-radius: 3px;
+        }
+
+        // ---- Hold bracket BELOW swaras: "smiley bracket" `⌣` connecting
+        // repeated swaras of the SAME combo filling multiple consecutive
+        // sub-slots within a beat (one continuous held sound). ----
+        &.bhatkhande-hold-end::after {
+            content: '';
+            position: absolute;
+            bottom: -0.15em;
+            left: 50%;
+            width: calc(100% + 1em + 0.3em);
+            height: 0.3em;
+            border: 1.5px solid #0F766E;
+            border-top: none;
+            border-radius: 0 0 50% 50% / 0 0 100% 100%;
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+    }
+
     .bhatkhande-rest {
         color: rgba(225, 29, 72, 0.2);
     font-size: 1.5rem;

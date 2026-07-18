@@ -33,7 +33,9 @@ export default function IndianNotation({
   currentBeat?: number;
 }) {
   const [parsed, setParsed] = useState<ParsedScore | null>(null);
-  const [internalLanguage, setInternalLanguage] = useState<Language>('hindi');
+  // Default to English sargam: cleaner than Devanagari (which stacks combining
+  // marks for komal/tivra + saptak dot below in visually-confusing orders).
+  const [internalLanguage, setInternalLanguage] = useState<Language>('english');
   const language = languageProp ?? internalLanguage;
   const controlsHidden = languageProp !== undefined;
   const [loading, setLoading] = useState(true);
@@ -103,6 +105,9 @@ export default function IndianNotation({
                 key={ri}
                 beatMarks={row.beatMarks}
                 cells={row.cells}
+                meendLinks={row.meendLinks}
+                holdLinks={row.holdLinks}
+                chordLinks={row.chordLinks}
                 rowStartBeat={ri * 8}
                 currentBeat={currentBeat}
               />
@@ -121,11 +126,17 @@ export default function IndianNotation({
 function RowWithHeader({
   beatMarks,
   cells,
+  meendLinks,
+  holdLinks,
+  chordLinks,
   rowStartBeat,
   currentBeat,
 }: {
   beatMarks: string[];
   cells: string[][][];
+  meendLinks: boolean[][][];
+  holdLinks: boolean[][][];
+  chordLinks: boolean[][][];
   rowStartBeat: number;
   currentBeat: number;
 }) {
@@ -151,14 +162,31 @@ function RowWithHeader({
         {cells.map((cell, i) => {
           const globalBeat = rowStartBeat + i;
           const isRest = cell.length === 1 && cell[0].length === 1 && cell[0][0] === '\u00B7';
+          const meend = meendLinks[i] || [];
+          const hold = holdLinks[i] || [];
+          const chord = chordLinks[i] || [];
           return (
             <td
               key={i}
               className={`bhatkhande-swar-cell ${isRest ? 'bhatkhande-rest' : ''} ${isCurrent(globalBeat) ? 'bhatkhande-current' : ''}`}
             >
-              {cell.map((subRow, si) => (
-                <div key={si} className="bhatkhande-subrow">{subRow.join('')}</div>
-              ))}
+              {cell.map((subRow, si) => {
+                const subMeend = meend[si] || [];
+                const subHold = hold[si] || [];
+                const subChord = chord[si] || [];
+                return (
+                  <div key={si} className="bhatkhande-subrow">
+                    {subRow.map((s, pos) => (
+                      <span
+                        key={pos}
+                        className={`bhatkhande-swara ${subChord[pos] ? 'bhatkhande-chord' : ''} ${subMeend[pos] ? 'bhatkhande-meend-end' : ''} ${pos > 0 && subMeend[pos - 1] ? 'bhatkhande-meend-start' : ''} ${subHold[pos] ? 'bhatkhande-hold-end' : ''} ${pos > 0 && subHold[pos - 1] ? 'bhatkhande-hold-start' : ''}`}
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })}
             </td>
           );
         })}

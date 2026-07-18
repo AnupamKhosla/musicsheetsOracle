@@ -18,10 +18,10 @@ interface VoiceParams {
 }
 
 const VOICE_PARAMS: Record<Exclude<Voice, 'piano' | 'harmonium'>, VoiceParams> = {
-  sine:     { oscType: 'sine',     envelope: { attack: 0.02, decay: 0.1, sustain: 0.6, release: 0.4 } },
-  triangle: { oscType: 'triangle', envelope: { attack: 0.02, decay: 0.1, sustain: 0.5, release: 0.5 } },
-  square:   { oscType: 'square',   envelope: { attack: 0.005, decay: 0.05, sustain: 0.4, release: 0.2 } },
-  sawtooth: { oscType: 'sawtooth', envelope: { attack: 0.005, decay: 0.05, sustain: 0.4, release: 0.2 } },
+  sine:     { oscType: 'sine',     envelope: { attack: 0.02, decay: 0.1, sustain: 0.1, release: 0.05 } },
+  triangle: { oscType: 'triangle', envelope: { attack: 0.02, decay: 0.1, sustain: 0.1, release: 0.05 } },
+  square:   { oscType: 'square',   envelope: { attack: 0.005, decay: 0.05, sustain: 0.1, release: 0.05 } },
+  sawtooth: { oscType: 'sawtooth', envelope: { attack: 0.005, decay: 0.05, sustain: 0.1, release: 0.05 } },
 };
 
 let synth: Tone.PolySynth | Tone.Sampler | null = null;
@@ -86,7 +86,7 @@ async function getInstrument(voice: Voice): Promise<Tone.PolySynth | Tone.Sample
     // Harmonium: reed organ approximation — sawtooth, slow attack, long release
     harmoniumSynth = new Tone.PolySynth(Tone.Synth, {
       oscillator: { type: 'sawtooth' },
-      envelope: { attack: 0.15, decay: 0.2, sustain: 0.7, release: 0.8 },
+      envelope: { attack: 0.08, decay: 0.05, sustain: 0.2, release: 0.05 },
     }).toDestination();
     synth = harmoniumSynth;
     currentVoice = voice;

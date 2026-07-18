@@ -66,6 +66,29 @@ export default function PostPage() {
       <section className="relative">
         <div className="container relative">
           {post.xmlContent && <MusicSheetViewer xmlContent={post.xmlContent} sheetName={post.sheetName} />}
+          {!post.xmlContent && post._id && !error && (
+            <div
+              style={{
+                maxWidth: 600,
+                margin: '2rem auto',
+                padding: '1.5rem 1.25rem',
+                background: '#FEF3C7',
+                border: '1px solid #FCD34D',
+                borderRadius: 12,
+                color: '#92400E',
+                textAlign: 'center',
+                fontFamily: '"Inter", sans-serif',
+              }}
+            >
+              <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: 8 }}>
+                Sheet content unavailable
+              </div>
+              <div style={{ fontSize: '0.95rem', lineHeight: 1.5 }}>
+                The metadata for this sheet is in the database, but the original
+                MusicXML content is missing. This can happen for older imports.
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

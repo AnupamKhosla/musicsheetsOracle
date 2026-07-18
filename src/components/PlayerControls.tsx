@@ -49,11 +49,11 @@ export default function PlayerControls({
     };
   }, []);
 
-  const startBeatTracking = () => {
+  const startBeatTracking = (offsetBeats: number = 0) => {
     if (!onBeatChange) return;
-    startTimeRef.current = performance.now();
+    startTimeRef.current = performance.now() - (offsetBeats * 60 / bpm);
     bpmRef.current = bpm;
-    let lastBeat = -1;
+    let lastBeat = Math.floor(offsetBeats) - 1;
     const tick = () => {
       const elapsedSec = (performance.now() - startTimeRef.current) / 1000;
       const beat = elapsedSec * (bpmRef.current / 60);
@@ -66,12 +66,14 @@ export default function PlayerControls({
     animRef.current = requestAnimationFrame(tick);
   };
 
-  const stopBeatTracking = () => {
+  const stopBeatTracking = (resetCursor: boolean = true) => {
     if (animRef.current !== null) {
       cancelAnimationFrame(animRef.current);
       animRef.current = null;
     }
-    onBeatChange?.(0);
+    if (resetCursor) {
+      onBeatChange?.(0);
+    }
   };
 
   const play = async () => {
@@ -80,8 +82,7 @@ export default function PlayerControls({
       // Resume from pause - pass offset to audio
       setState('playing');
       const resumeOffset = pausePositionRef.current;
-      startTimeRef.current = performance.now() - (resumeOffset * 60 / bpm);
-      
+
       // Restart audio from pause position
       handleRef.current = await playEvents(events, {
         bpm,
@@ -91,12 +92,12 @@ export default function PlayerControls({
           handleRef.current = null;
           pausePositionRef.current = 0;
           setState('done');
-          stopBeatTracking();
+          stopBeatTracking(true);
         },
       });
-      
-      // Restart beat tracking
-      startBeatTracking();
+
+      // Restart beat tracking from the paused position
+      startBeatTracking(resumeOffset);
       return;
     }
     
@@ -112,7 +113,7 @@ export default function PlayerControls({
           handleRef.current = null;
           pausePositionRef.current = 0;
           setState('done');
-          stopBeatTracking();
+          stopBeatTracking(true);
         },
       });
       setState('playing');
@@ -120,7 +121,7 @@ export default function PlayerControls({
     } catch (e) {
       console.error('Playback failed', e);
       setState('idle');
-      stopBeatTracking();
+      stopBeatTracking(true);
     }
   };
 
@@ -130,7 +131,7 @@ export default function PlayerControls({
     pausePositionRef.current = elapsedSec * (bpm / 60);
     handleRef.current?.pause();
     setState('paused');
-    stopBeatTracking();
+    stopBeatTracking(false);
   };
 
   const stop = () => {
@@ -138,7 +139,7 @@ export default function PlayerControls({
     handleRef.current = null;
     pausePositionRef.current = 0;
     setState('idle');
-    stopBeatTracking();
+    stopBeatTracking(true);
   };
 
   return (

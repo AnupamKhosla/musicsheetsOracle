@@ -1,19 +1,12 @@
+@use '../custom_scss/fonts';
+@use '../custom_scss/general';
+@use '../custom_scss/structure/topnav';
+@use '../custom_scss/structure/footer';
+@use '../custom_scss/pages/bhatkhande';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import '@iconscout/unicons/css/line.css';
-@import '../custom_scss/fonts';
-@import '../custom_scss/general';
-@import '../custom_scss/structure/topnav';
-@import '../custom_scss/structure/footer';
-@import '../custom_scss/pages/bhatkhande';
-@import url('https://fonts.googleapis.com/css?family=Nunito:300,400,500,600,700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Alex+Brush&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@300&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Kaushan+Script&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap');
 
 html {
   font-family: "Euclid Circular A", "Akzidenz", Helvetica, Arial, sans-serif;

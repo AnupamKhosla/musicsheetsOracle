@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.scss';
+import '@iconscout/unicons/css/line.css';
 import Navigation from '@/components/Navigation';
 
 export const metadata: Metadata = {
@@ -10,6 +11,16 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" dir="ltr">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css?family=Nunito:300,400,500,600,700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@300&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Kaushan+Script&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      </head>
       <body>
         <div className="app-container bg-slate-100 min-h-screen flex flex-col">
           <Navigation />
@@ -21,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 Anupam Khosla
               </a>
               . The{' '}
-              <a className="text-rose-500 hover:text-rose-600 underline" href="https://github.com/AnupamKhosla/musicGitBeanstalk">
+              <a className="text-rose-500 hover:text-rose-600 underline" href="https://github.com/AnupamKhosla/musicsheetsOracle">
                 design and code
               </a>{' '}
               is licenced under CC BY-SA 4.0.

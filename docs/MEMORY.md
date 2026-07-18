@@ -11,9 +11,9 @@ This file serves as persistent memory across OpenCode chat sessions. Since the A
 ## Project State
 
 ### Current Status
-- **Last Updated**: 2026-05-23
+- **Last Updated**: 2026-07-18
 - **Active Branches**: master
-- **Current Focus**: Tailscale Funnel COMPLETED. Funnel moved through Nginx (port 8080). All services survive reboot. Next: Nginx rate limiting (`limit_req_zone`), `express-rate-limit` for per-route control, Pages + iframe backup.
+- **Current Focus**: Notation converter rewrite — `crossBeatHold` removed (vertical-bar continuation disliked), replaced with `chordLinks` (chord-combo rule). One sub-row per beat cell; simultaneous notes merge into combos with subtle tint. Three bug fixes applied (double-counted keyAlter, false top-bar gridline, Devanagari combining marks). Outstanding: human verification by playing + testing multiple sheets; `/notation-guide` page; bulk import of 10k+ sheets.
 
 ### Recent Decisions
 - Using PM2 for process management
@@ -23,6 +23,8 @@ This file serves as persistent memory across OpenCode chat sessions. Since the A
 - Welcome page on VPS IP, app served on domain
 - Disabled `opencode-daytona` plugin (sandbox isolation issues)
 - `rm` set to `ask` instead of `deny` for project file management
+- **Bhatkhande renderer**: monophonic standard + chord-combo [OURS]. One sub-row per beat cell, simultaneous notes merge into one combo glyph with subtle tint. Smile-bracket `⌣` under held-note reps within a beat. Meend arc `⌒` above between adjacent single-note combos under slur. No cross-beat edge markers. Default sargam = English (Devanagari combining marks confuse browsers).
+- **MusicXML `<alter>`** is authoritative — do NOT add `keyAlter[step]` on top (double-counts, breaks F# in D major → renders as Ma instead of Ga).
 
 ### User Preferences
 - Always ask before executing actions (Ask First mode)
@@ -134,6 +136,32 @@ TEMPLATE for new entries (copy and fill):
   - **VPS files changed**: `/etc/nginx/sites-available/musicsheets.site`
   - **Commands**: `tailscale funnel --https=443 localhost:5050 off`, `tailscale funnel --bg --https=443 localhost:8080`, `pm2 startup`, `pm2 start ecosystem.config.json`, `pm2 save`, `brew install gitleaks`, `git config core.hooksPath .githooks`
   - **Key lesson**: Tailscale funnel CLI changed in v1.52. Always use `--https=443 <target>` syntax. Funnel only allows public ports 443/8443/10000. Old syntax (`tailscale funnel 5050`) deprecated.
+
+- **Date**: 2026-07-18
+  - **Category**: code
+  - **Description**: Bhatkhande converter rewrite — replaced interval-partition (which stacked chord notes vertically, reaching 8 sub-rows/cell on Estrellita) with chord-combo algorithm: one sub-row per beat cell, simultaneous notes merge into one horizontal combo glyph. Replaced `crossBeatHold: string[][][]` (vertical edge bars user disliked) with `chordLinks: boolean[][][]` (rose-tint background on chord combos). Smile-bracket `⌣` under same-combo reps for held notes. Meend arc `⌒` between adjacent single-note combos under slur. Renderer (IndianNotation.tsx) and SCSS (_bhatkhande.scss) updated in lockstep.
+  - **Files**: `src/lib/bhatkhande.ts`, `src/components/IndianNotation.tsx`, `src/custom_scss/pages/_bhatkhande.scss`, `src/app/post/[id]/page.tsx`, `docs/notation-spec.md`
+  - **Commands**: `npx tsc --noEmit` (clean), `npx tsx tmp/verify_chord_combo.mts` (PASS), `npx tsx tmp/verify_brahms.mts` (PASS)
+- **Date**: 2026-07-18
+  - **Category**: bug
+  - **Description**: Three converter bugs fixed:
+    1. `noteSemitone()` double-counted key signature: `step + alter + keyAlter[step]`. MusicXML `<alter>` is authoritative when non-zero (verified: F#5 and C#5 in D-major Brahms violin part carry explicit `<alter>1</alter>`). F#5 in D major computed as Ma instead of Ga. Same bug in `processVoice()`'s inline `totalAlter`. Both fixed: use `n.alter` when non-zero, else `keyAlter[step]` fallback.
+    2. `.bhatkhande-chord::before` drew 2px top bar on every chord span; adjacent chord reps visually merged into a continuous horizontal line across the row (looked like a spurious grid rule). Removed `::before`, kept only subtle rose tint.
+    3. Default sargam changed from Hindi to English (Devanagari combining marks — anudatta, saptak dot, anusvara — stack ambiguously across browsers).
+  - **Files**: `src/lib/bhatkhande.ts` (noteSemitone + processVoice), `src/custom_scss/pages/_bhatkhande.scss` (chord class), `src/components/IndianNotation.tsx` (default language)
+- **Date**: 2026-07-18
+  - **Category**: research
+  - **Description**: raag-hindustani.com sitemap (62 URLs) + Notes.html fetched. Confirms our `S r R g G m M P d D n N` notation ID system, Sa/Pa achala, movable do, 10 thaats heptatonic. Saptak convention differs (they use quotes `'S`/`S'`, we use dot below + chandrabindu Devanagari markers). Citation added to `docs/notation-spec.md` §3.6.
+  - **Files**: `docs/notation-spec.md`
+  - **Commands**: `webfetch https://raag-hindustani.com/sitemap.xml`, `webfetch https://raag-hindustani.com/Notes.html`
+- **Date**: 2026-07-18
+  - **Category**: bug
+  - **Description**: `npm run lint` broken — `next lint` fails with "Invalid project directory provided, no such directory: .../musicsheetsOracle/lint". Looks like a `next` v16 invocation issue. Not fixed; investigation pending.
+- **Date**: 2026-07-18
+  - **Category**: bug
+  - **Description**: **Cross-beat hold bracket missing (Kenek-kenek Ode /post/6a49f36e32c43ef5e06381d7)**. User: "the last S R — last two R were connected without hand, but your algo didn't put bottom smiley bracket and your bracket is not spanning multiple beat blocks". Root cause: the previous cross-beat hold implementation (vertical edge bars on cell borders) was removed entirely as part of the chord-combo rewrite, leaving no mechanism to mark a held note that spans multiple beats. Within-beat holds work (single `NoteInstance` with `reps > 1`), but cross-beat holds across separate `<note>` elements with the same pitch (e.g. three C notes dur=2 each in Kenek beats 13/14/15) silently drop because each becomes its own instance with no link to its neighbour. Same pitch + adjacent time range should collapse into one logical held instance, with the smiley bracket `⌣` visually continuing across cell boundaries. Not yet fixed — documented in `docs/notation-spec.md` §4.3.
+  - **Files**: `docs/notation-spec.md`
+  - **Test sheet**: `/post/6a49f36e32c43ef5e06381d7` (Kenek-kenek Ode); notes 56-58 = three C notes dur=2 spanning beats 13/14/15 of row 5
 
 ## Notes
 <!-- Add any other persistent notes, links, or reminders here -->

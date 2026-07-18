@@ -1,6 +1,12 @@
 // Bhatkhande (Indian) notation converter — pure, no DOM dependencies.
-// Consumes a normalized ParsedNote array and a few key/time parameters,
-// returns a swara-grid data structure ready for rendering.
+//
+// Implements the notation system defined in docs/notation-spec.md:
+//   - Per-voice NoteInstance collection (tie chains collapse into one instance)
+//   - Global merge across voices, bucketed by beat
+//   - Interval-partition by time overlap (sequential → same sub-row, chord →
+//     stacked sub-rows)
+//   - Repeat swara across beats and across sub-beat slots (no em-dash)
+//   - Meend link flags from <slur> spans
 //
 // Data structures (saptak names, swara keywords, taal definitions, raga
 // varjit-svaras) are imported from sargam-data.ts, ported from
@@ -29,6 +35,8 @@ export interface ParsedNote {
   isRest: boolean;
   tieStart: boolean;
   tieStop: boolean;
+  slurStart?: boolean;
+  slurStop?: boolean;
 }
 
 export interface KeyInfo {
@@ -53,6 +61,19 @@ export interface NotationOptions {
 export interface DisplayRow {
   cells: string[][][];
   beatMarks: string[];
+  /** Parallel to cells: meendLinks[cellIdx][subrowIdx][swaraPos] = true means
+   * an arc connects this swara to the next swara in the same sub-row. */
+  meendLinks: boolean[][][];
+  /** Parallel to cells: holdLinks[cellIdx][subrowIdx][swaraPos] = true means a
+   * "smiley bracket" `⌣` UNDER this swara connects it to the next swara — the
+   * two are repetitions of the SAME combo (one or more NoteInstances held
+   * simultaneously across consecutive sub-slots within this beat — one
+   * continuous held sound, not re-articulated). */
+  holdLinks: boolean[][][];
+  /** Parallel to cells: chordLinks[cellIdx][subrowIdx][swaraPos] = true means
+   * this swara position holds a CHORD combo — 2+ simultaneous notes merged into
+   * one horizontal glyph group with a top bar + tint. False = single swara. */
+  chordLinks: boolean[][][];
 }
 
 export interface NotationData {
@@ -85,12 +106,24 @@ const HINDI_NUMS = [
   '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16',
 ];
 const ROW_BEATS = 8;
-const TIE = '\u2014';
 const REST = '\u00B7';
 const SAM = '\u0938\u092E';
 
 function mod(n: number, m: number): number {
   return ((n % m) + m) % m;
+}
+
+function gcd2(a: number, b: number): number {
+  a = Math.abs(a);
+  b = Math.abs(b);
+  while (b) {
+    [a, b] = [b, a % b];
+  }
+  return a || 1;
+}
+
+function gcdAll(nums: number[]): number {
+  return nums.reduce((g, n) => gcd2(g, n), 0) || 1;
 }
 
 function buildKeyAlter(fifths: number): Record<string, number> {
@@ -100,13 +133,15 @@ function buildKeyAlter(fifths: number): Record<string, number> {
   return out;
 }
 
-function pitchToMidi(step: string, alter: number, octave: number, keyAlter: Record<string, number>): number {
-  const totalAlter = alter + (keyAlter[step] || 0);
-  return (octave + 1) * 12 + STEP_TO_SEMITONE[step] + totalAlter;
-}
-
 function noteSemitone(n: ParsedNote, keyAlter: Record<string, number>): number {
-  return STEP_TO_SEMITONE[n.step] + n.alter + (keyAlter[n.step] || 0);
+  // MusicXML's <alter> element is authoritative when present (encoders include
+  // it for every chromatic pitch, including key-signature accidentals —
+  // verified against real scores). Adding keyAlter on top double-counts
+  // the key signature: F# in D major would compute as Ma instead of Ga.
+  // We only fall back to keyAlter when <alter> was absent (=0) for a step
+  // that has a key-signature accidental.
+  const alter = (n.alter !== 0) ? n.alter : (keyAlter[n.step] || 0);
+  return STEP_TO_SEMITONE[n.step] + alter;
 }
 
 function findSaOctave(notes: ParsedNote[], saSemitone: number, keyAlter: Record<string, number>): number {
@@ -118,9 +153,18 @@ function findSaOctave(notes: ParsedNote[], saSemitone: number, keyAlter: Record<
   return 4;
 }
 
-interface VoiceResult {
-  beats: string[][][];
-  midiEvents: MidiEvent[];
+// A note instance occupies [startDiv, endDiv) on the timeline. It carries the
+// swara text, MIDI pitch, and the slur flags from its source note. Ties collapse
+// a chain into one instance spanning the full tied duration.
+interface NoteInstance {
+  voice: string;
+  startDiv: number;
+  endDiv: number;
+  swaraText: string;
+  midi: number;
+  slurStart: boolean;
+  slurStop: boolean;
+  underSlur?: boolean;
 }
 
 function processVoice(
@@ -130,145 +174,136 @@ function processVoice(
   saOctave: number,
   keyAlter: Record<string, number>,
   divsPerBeat: number,
-): VoiceResult {
-  // Per beat: array of sub-rows. Each sub-row = string[] of swaras.
-  // Chord notes → each gets its own sub-row. Sequential notes in same beat → share one sub-row.
-  const allBeats: string[][][] = [];
+): { instances: NoteInstance[]; midiEvents: MidiEvent[] } {
+  const instances: NoteInstance[] = [];
   const midiEvents: MidiEvent[] = [];
 
-  const ensureBeats = (n: number) => {
-    while (allBeats.length <= n) allBeats.push([]);
-  };
-
-  let cumDiv = 0;
+  let position = 0;
   let lastStartDiv = 0;
-  let lastDisplayBeat = -1;
-  let tieStartBeat: number | null = null;
-  let tieLastDashedBeat = -1;
-  let tieSubrowIdx = 0;
-  let tieMidiStartDiv = 0;
-  let tieMidiDuration = 0;
-  let tieMidiPitch = 0;
+
+  // Tie chain accumulator. While non-null, subsequent non-chord notes extend
+  // the held note instead of starting a new one. A <chord/> mid-tie is a
+  // different simultaneous pitch, not a continuation — we let it flow through
+  // the normal branch (it won't extend the tie).
+  let tieAccum: {
+    startDiv: number;
+    midi: number;
+    swaraText: string;
+    slurStart: boolean;
+  } | null = null;
 
   for (const note of voiceNotes) {
     if (note.duration <= 0) continue;
 
-    // --- tie continuation (swara grid) ---
-    // Gate on !note.isChord: a <chord/> note is a different simultaneous
-    // pitch, not a continuation of the tied note. Without this gate the
-    // chord's duration was being consumed by the tie branch, shifting
-    // later MIDI events and dropping the chord's swara from the grid.
-    if (tieStartBeat !== null && !note.isChord) {
-      cumDiv += note.duration;
-      tieMidiDuration += note.duration;
-      const newEndBeat = Math.ceil(cumDiv / divsPerBeat) - 1;
-      ensureBeats(newEndBeat);
-      const from = Math.max(tieLastDashedBeat + 1, tieStartBeat + 1);
-      for (let b = from; b <= newEndBeat; b++) {
-        ensureBeats(b);
-        while (allBeats[b].length <= tieSubrowIdx) allBeats[b].push([]);
-        allBeats[b][tieSubrowIdx].push(TIE);
+    const startDiv = note.isChord ? lastStartDiv : position;
+    const endDiv = startDiv + note.duration;
+
+    if (note.isRest || !note.step) {
+      if (!note.isChord) {
+        position = endDiv;
+        lastStartDiv = startDiv;
       }
-      tieLastDashedBeat = newEndBeat;
-      if (note.tieStop) {
-        const startBeat = tieMidiStartDiv / divsPerBeat;
-        const endBeat = cumDiv / divsPerBeat;
-        midiEvents.push({
-          midi: tieMidiPitch,
-          startBeat,
-          durationBeats: endBeat - startBeat,
-        });
-        tieStartBeat = null;
-        tieLastDashedBeat = -1;
-      }
-      // Keep lastDisplayBeat in sync with the tie's position so the next
-      // pitch note starts a fresh sub-row instead of being incorrectly
-      // merged into the pre-tie sub-row.
-      lastDisplayBeat = newEndBeat;
-      lastStartDiv = cumDiv;
       continue;
     }
 
-    const startDiv = note.isChord ? lastStartDiv : cumDiv;
-    const displayBeat = Math.floor(startDiv / divsPerBeat);
-    const midiStartBeat = startDiv / divsPerBeat;
-    const endExclusiveDiv = startDiv + note.duration;
-    const endBeat = Math.ceil(endExclusiveDiv / divsPerBeat) - 1;
-    const midiDuration = (endExclusiveDiv - startDiv) / divsPerBeat;
+    const ns = noteSemitone(note, keyAlter);
+    const semitoneFromSa = mod(ns - saSemitone, 12);
+    const swaraLabel = labels[semitoneFromSa] || labels[0];
+    const saptak = saptakForOctave(note.octave, saOctave);
+    const marker = SAPTAK_MARKERS[saptak];
+    const swaraText = swaraLabel + marker;
+    const midi = (note.octave + 1) * 12 + ns;
 
-    ensureBeats(endBeat);
-
-    if (!note.isRest && note.step) {
-      const totalAlter = note.alter + (keyAlter[note.step] || 0);
-      const ns = STEP_TO_SEMITONE[note.step] + totalAlter;
-      const semitoneFromSa = mod(ns - saSemitone, 12);
-      const swaraLabel = labels[semitoneFromSa] || labels[0];
-      const saptak = saptakForOctave(note.octave, saOctave);
-      const marker = SAPTAK_MARKERS[saptak];
-      const swaraText = swaraLabel + marker;
-
-      ensureBeats(endBeat);
-
-      // Chord notes: each gets its own sub-row (vertical stack).
-      // Sequential notes in same beat: share sub-row (horizontal concat).
-      if (note.isChord || displayBeat !== lastDisplayBeat) {
-        allBeats[displayBeat].push([swaraText]);
-      } else {
-        allBeats[displayBeat][allBeats[displayBeat].length - 1].push(swaraText);
+    // --- Tie continuation branch ---
+    // A non-chord note arriving while a tie is open extends the held note's
+    // duration. If it's tieStop, we finalize the instance and the midi event.
+    if (tieAccum && !note.isChord) {
+      if (note.tieStop) {
+        const tieStartDiv = tieAccum.startDiv;
+        instances.push({
+          voice: note.voice,
+          startDiv: tieStartDiv,
+          endDiv,
+          swaraText: tieAccum.swaraText,
+          midi: tieAccum.midi,
+          slurStart: tieAccum.slurStart,
+          slurStop: note.slurStop || false,
+        });
+        midiEvents.push({
+          midi: tieAccum.midi,
+          startBeat: tieStartDiv / divsPerBeat,
+          durationBeats: (endDiv - tieStartDiv) / divsPerBeat,
+        });
+        tieAccum = null;
       }
-      // Remember which sub-row this note lives in so tie dashes (em-dashes
-      // for held notes) go to the right sub-row, not just the last one in
-      // the cell.
-      const noteSubrowIdx = allBeats[displayBeat].length - 1;
-
-      // Tie continuations for longer notes
-      for (let b = displayBeat + 1; b <= endBeat; b++) {
-        ensureBeats(b);
-        while (allBeats[b].length <= noteSubrowIdx) allBeats[b].push([]);
-        allBeats[b][noteSubrowIdx].push(TIE);
-      }
-      tieLastDashedBeat = endBeat;
-
-      const midi = pitchToMidi(note.step, note.alter, note.octave, keyAlter);
-      if (note.tieStart && !note.tieStop) {
-        tieStartBeat = displayBeat;
-        tieSubrowIdx = noteSubrowIdx;
-        tieMidiStartDiv = startDiv;
-        tieMidiDuration = note.duration;
-        tieMidiPitch = midi;
-      } else {
-        midiEvents.push({ midi, startBeat: midiStartBeat, durationBeats: midiDuration });
-      }
-
-      lastDisplayBeat = displayBeat;
+      // Either way, this note advanced the timeline for the held tie.
+      position = endDiv;
+      lastStartDiv = startDiv;
+      continue;
     }
+
+    // --- Tie start: open a new tie chain ---
+    if (note.tieStart && !note.tieStop) {
+      tieAccum = { startDiv, midi, swaraText, slurStart: note.slurStart || false };
+      // The chain still occupies time on the grid as a NoteInstance — we push
+      // it now with endDiv = endDiv of the start note. When the stop note
+      // arrives, the tie-continuation branch above will push a SECOND spanning
+      // instance and we'll dedupe in the merge step below via startDiv.
+      // To avoid double-counting we DON'T push an instance here; the tie
+      // span is encoded only by the final instance pushed at tieStop time.
+      // The midi event is pushed at finalize.
+      if (!note.isChord) {
+        position = endDiv;
+        lastStartDiv = startDiv;
+      }
+      continue;
+    }
+
+    // --- Regular note ---
+    instances.push({
+      voice: note.voice,
+      startDiv,
+      endDiv,
+      swaraText,
+      midi,
+      slurStart: note.slurStart || false,
+      slurStop: note.slurStop || false,
+    });
+    midiEvents.push({
+      midi,
+      startBeat: startDiv / divsPerBeat,
+      durationBeats: note.duration / divsPerBeat,
+    });
 
     if (!note.isChord) {
-      cumDiv += note.duration;
-      lastStartDiv = cumDiv;
+      position = endDiv;
+      lastStartDiv = startDiv;
     }
   }
 
-  // Flush any pending tie at end of voice. <tie type="start"/> with no
-  // matching stop (common on final held note of a piece) would otherwise
-  // drop the MIDI event entirely.
-  if (tieStartBeat !== null) {
-    const startBeat = tieMidiStartDiv / divsPerBeat;
-    const endBeat = cumDiv / divsPerBeat;
-    midiEvents.push({
-      midi: tieMidiPitch,
-      startBeat,
-      durationBeats: endBeat - startBeat,
+  // Flush a dangling tie (final <tie type="start"/> with no stop). Without
+  // this, the last held note of a piece never gets an instance/midi event.
+  if (tieAccum) {
+    const tieStartDiv = tieAccum.startDiv;
+    const endDiv = position;
+    instances.push({
+      voice: '',
+      startDiv: tieStartDiv,
+      endDiv,
+      swaraText: tieAccum.swaraText,
+      midi: tieAccum.midi,
+      slurStart: tieAccum.slurStart,
+      slurStop: false,
     });
-    tieStartBeat = null;
+    midiEvents.push({
+      midi: tieAccum.midi,
+      startBeat: tieStartDiv / divsPerBeat,
+      durationBeats: (endDiv - tieStartDiv) / divsPerBeat,
+    });
+    tieAccum = null;
   }
 
-  // Fill empty beats with REST
-  for (let i = 0; i < allBeats.length; i++) {
-    if (allBeats[i].length === 0) allBeats[i] = [[REST]];
-  }
-
-  return { beats: allBeats, midiEvents };
+  return { instances, midiEvents };
 }
 
 export function convertToBhatkhande(opts: NotationOptions): NotationData {
@@ -303,35 +338,196 @@ export function convertToBhatkhande(opts: NotationOptions): NotationData {
 
   const labels = SWARA_LABELS[language];
 
-  // Process all voices independently
+  // --- Process every voice into NoteInstances + midi events ---
   const voiceSet = Array.from(new Set(notes.map((n) => n.voice || '1')));
-  const voiceResults: { voice: string; result: VoiceResult }[] = [];
+  const allInstances: NoteInstance[] = [];
   const allMidiEvents: MidiEvent[] = [];
 
   for (const voice of voiceSet) {
     const voiceNotes = notes.filter((n) => (n.voice || '1') === voice);
-    const result = processVoice(voiceNotes, labels, saSemitone, saOctave, keyAlter, divsPerBeat);
-    voiceResults.push({ voice, result });
-    allMidiEvents.push(...result.midiEvents);
+    const { instances, midiEvents } = processVoice(
+      voiceNotes, labels, saSemitone, saOctave, keyAlter, divsPerBeat,
+    );
+    allInstances.push(...instances);
+    allMidiEvents.push(...midiEvents);
   }
 
-  // Merge per-voice beats: each cell = string[][], top to bottom per voice.
-  // Chord sub-rows within a voice stack vertically, sequential notes concat horizontally.
-  const maxBeats = voiceResults.reduce((m, v) => Math.max(m, v.result.beats.length), 0);
+  // --- Mark "underSlur" per voice, in time order ---
+  // A slur opens at a note with slurStart and closes at the next note (per
+  // voice) with slurStop; everything in between is under the slur → eligible
+  // for meend linking.
+  for (const voice of voiceSet) {
+    const vi = allInstances
+      .filter((i) => i.voice === voice)
+      .sort((a, b) => a.startDiv - b.startDiv);
+    let slurOpen = false;
+    for (const inst of vi) {
+      if (inst.slurStart) slurOpen = true;
+      if (slurOpen) inst.underSlur = true;
+      if (inst.slurStop) slurOpen = false;
+    }
+  }
+
+  // --- Build the grid: bucket all instances by beat, chord-combo layout ---
+  // One sub-row per cell. For each slot within the beat we collect every
+  // NoteInstance "playing" in that slot. Consecutive slots with identical
+  // instance sets collapse into reps (repeated swaras with a hold-smiley-bracket
+  // linking them). Multiple simultaneous instances in a slot render as a chord
+  // combo — their swaras joined horizontally with a top bar + tint (chordLinks).
+  const maxEndDiv = allInstances.reduce((m, i) => Math.max(m, i.endDiv), 0);
+  const totalBeats = Math.max(0, Math.ceil(maxEndDiv / divsPerBeat));
+
   const allBeats: string[][][] = [];
-  for (let i = 0; i < maxBeats; i++) {
-    allBeats[i] = [];
-    for (const { result } of voiceResults) {
-      if (i < result.beats.length) {
-        for (const subRow of result.beats[i]) {
-          if (subRow.length > 0) allBeats[i].push(subRow);
+  const meendLinksPerBeat: boolean[][][] = [];
+  const holdLinksPerBeat: boolean[][][] = [];
+  const chordLinksPerBeat: boolean[][][] = [];
+
+  for (let b = 0; b < totalBeats; b++) {
+    const beatStart = b * divsPerBeat;
+    const beatEnd = beatStart + divsPerBeat;
+
+    const touching = allInstances
+      .filter((i) => i.startDiv < beatEnd && i.endDiv > beatStart)
+      .map((i) => ({
+        inst: i,
+        clippedStart: Math.max(i.startDiv, beatStart),
+        clippedEnd: Math.min(i.endDiv, beatEnd),
+      }));
+
+    if (touching.length === 0) {
+      allBeats.push([[REST]]);
+      meendLinksPerBeat.push([[]]);
+      holdLinksPerBeat.push([[]]);
+      chordLinksPerBeat.push([[]]);
+      continue;
+    }
+
+    const clippedDurations = touching.map((t) => t.clippedEnd - t.clippedStart);
+    const unit = gcdAll([divsPerBeat, ...clippedDurations]);
+    const safeUnit = unit > 0 ? unit : divsPerBeat;
+    const numSlots = Math.round(divsPerBeat / safeUnit);
+
+    const slotted = touching.map((t) => ({
+      inst: t.inst,
+      slotStart: Math.round((t.clippedStart - beatStart) / safeUnit),
+      slotEnd: Math.round((t.clippedEnd - beatStart) / safeUnit),
+    }));
+
+    // For each slot in [0, numSlots), find every instance playing in that slot,
+    // sorted by voice for stable display order.
+    const slotGroups: (typeof slotted)[] = [];
+    for (let s = 0; s < numSlots; s++) {
+      slotGroups.push(
+        slotted
+          .filter((x) => x.slotStart <= s && x.slotEnd > s)
+          .sort((a, b2) =>
+            a.inst.voice.localeCompare(b2.inst.voice) ||
+            a.inst.startDiv - b2.inst.startDiv
+          ),
+      );
+    }
+
+    // Collapse consecutive slots with identical instance sets into single
+    // "combos" with reps > 1. Two slots are the same combo iff every playing
+    // instance is identical (same start div, voice, swara) — strict reference
+    // equality via startDiv identity prevents false hold links across separate
+    // re-articulated reiterations of the same swara.
+    const comboSignature = (g: typeof slotted): string =>
+      g
+        .map((x) => `${x.inst.startDiv}|${x.inst.voice}|${x.inst.swaraText}`)
+        .sort()
+        .join('||');
+
+    interface Combo {
+      members: typeof slotted;
+      reps: number;
+      startSlot: number;
+    }
+    const combos: Combo[] = [];
+    let i = 0;
+    while (i < numSlots) {
+      const group = slotGroups[i];
+      let reps = 1;
+      while (
+        i + reps < numSlots &&
+        comboSignature(slotGroups[i + reps]) === comboSignature(group)
+      ) {
+        reps++;
+      }
+      combos.push({ members: group, reps, startSlot: i });
+      i += reps;
+    }
+
+    // Flatten combos into one linear sub-row, filling each combo's reps with
+    // repeated swara text. This is also where we cross-reference `underSlur` to
+    // decide meend link placement.
+    const strings: string[] = [];
+    const meandLinks: boolean[] = [];
+    const holdLinks: boolean[] = [];
+    const chordLinks: boolean[] = [];
+
+    // Track each combo's first/last swara index in `strings` for meend linking.
+    const comboRanges: Array<{ first: number; last: number; combo: Combo }> = [];
+
+    for (const combo of combos) {
+      const first = strings.length;
+      if (combo.members.length === 0) {
+        // Empty slot = rest. Emit one REST per rep so position math stays in
+        // sync with numSlots.
+        for (let r = 0; r < combo.reps; r++) {
+          strings.push(REST);
+          meandLinks.push(false);
+          holdLinks.push(false);
+          chordLinks.push(false);
+        }
+        comboRanges.push({ first, last: strings.length - 1, combo });
+        continue;
+      }
+
+      const comboText = combo.members.map((m) => m.inst.swaraText).join('');
+      const isChord = combo.members.length > 1;
+
+      for (let r = 0; r < combo.reps; r++) {
+        strings.push(comboText);
+        meandLinks.push(false);
+        holdLinks.push(false);
+        chordLinks.push(isChord);
+      }
+
+      // Within-combo hold: reps > 1 means the same combo is held across
+      // consecutive slots → smiley bracket between adjacent reps.
+      if (combo.reps > 1) {
+        for (let r = 0; r < combo.reps - 1; r++) {
+          holdLinks[first + r] = true;
         }
       }
+
+      comboRanges.push({ first, last: strings.length - 1, combo });
     }
-    if (allBeats[i].length === 0) allBeats[i] = [[REST]];
+
+    // Meend: arc from each combo's last swara to the next combo's first swara
+    // when both combos are single-instance (monophonic glide), same voice, and
+    // both instances are under slur.
+    for (let c = 0; c < comboRanges.length - 1; c++) {
+      const a = comboRanges[c];
+      const b = comboRanges[c + 1];
+      if (a.combo.members.length !== 1 || b.combo.members.length !== 1) continue;
+      const ai = a.combo.members[0].inst;
+      const bi = b.combo.members[0].inst;
+      if (ai.voice !== bi.voice) continue;
+      if (!ai.underSlur || !bi.underSlur) continue;
+      if (a.last < strings.length) {
+        meandLinks[a.last] = true;
+      }
+    }
+
+    allBeats.push([strings]);
+    meendLinksPerBeat.push([meandLinks]);
+    holdLinksPerBeat.push([holdLinks]);
+    chordLinksPerBeat.push([chordLinks]);
   }
 
-  // Chord event count
+  // --- Chord event count (mirror of previous behaviour) ---
   const beatCounts: Record<number, number> = {};
   for (const e of allMidiEvents) {
     beatCounts[e.startBeat] = (beatCounts[e.startBeat] || 0) + 1;
@@ -340,21 +536,22 @@ export function convertToBhatkhande(opts: NotationOptions): NotationData {
     .filter((c) => c >= 2)
     .reduce((a, b) => a + b, 0);
 
+  // --- Group into display rows of ROW_BEATS ---
   const rows: DisplayRow[] = [];
   const taal = findTaalByBeatCount(time.beats);
   const cycleBeats = taal ? taal.numBeats : null;
   for (let i = 0; i < allBeats.length; i += ROW_BEATS) {
     const cells = allBeats.slice(i, i + ROW_BEATS);
+    const meendLinks = meendLinksPerBeat.slice(i, i + ROW_BEATS);
+    const holdLinks = holdLinksPerBeat.slice(i, i + ROW_BEATS);
+    const chordLinks = chordLinksPerBeat.slice(i, i + ROW_BEATS);
     const beatMarks = cells.map((_, j) => {
       const globalIdx = i + j;
-      // Sam at beat 0 and at the start of every subsequent tala cycle.
-      // Falls back to "every 16 beats" when no taal matched (covers long
-      // non-tala pieces that previously wrapped to a misleading '1').
       const cycleLen = cycleBeats ?? 16;
       if (globalIdx % cycleLen === 0) return SAM;
       return HINDI_NUMS[mod(globalIdx % cycleLen, HINDI_NUMS.length)];
     });
-    rows.push({ cells, beatMarks });
+    rows.push({ cells, beatMarks, meendLinks, holdLinks, chordLinks });
   }
 
   let taalNameLabel = '';
@@ -388,7 +585,6 @@ export const NOTATION_CONSTANTS = {
   SAPTAKS,
   HINDI_NUMS,
   ROW_BEATS,
-  TIE,
   REST,
   SAM,
   TAALS,

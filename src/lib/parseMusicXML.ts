@@ -12,6 +12,10 @@ export interface ParsedNote {
   isRest: boolean;
   tieStart: boolean;
   tieStop: boolean;
+  /** <slur type="start"/> present — opens a meend arc. */
+  slurStart?: boolean;
+  /** <slur type="stop"/> present — closes a meend arc. */
+  slurStop?: boolean;
 }
 
 export interface ParsedScore {
@@ -68,11 +72,23 @@ export function parseMusicXMLDoc(doc: Document): ParsedScore {
   const errNode = doc.querySelector('parsererror');
   if (errNode) throw new Error('Invalid MusicXML: ' + errNode.textContent);
 
-  const firstPart = doc.querySelector('score-partwise > part') || doc.querySelector('part');
-  if (!firstPart) throw new Error('No <part> elements found in MusicXML');
+  // Pick the part with the most pitched notes. A score may have multiple
+  // <part> elements (e.g. piano staff + melody), and the first part isn't
+  // necessarily the melody — sometimes it's all rests (MuseScore exports the
+  // melody as a separate part). Picking the busiest part avoids silently
+  // dropping the entire melody and producing an empty grid / silent playback.
+  const allParts = Array.from(doc.querySelectorAll('score-partwise > part, part'));
+  if (allParts.length === 0) throw new Error('No <part> elements found in MusicXML');
 
-  const firstMeasure = firstPart.querySelector('measure');
-  if (!firstMeasure) throw new Error('No <measure> elements found in first part');
+  const bestPart = allParts.reduce((best, part) => {
+    const pitched = part.querySelectorAll('measure note pitch').length;
+    const bestPitched = best ? best.querySelectorAll('measure note pitch').length : -1;
+    return pitched > bestPitched ? part : best;
+  }, null as Element | null);
+  if (!bestPart) throw new Error('No notes found in any <part> of the MusicXML');
+
+  const firstMeasure = bestPart.querySelector('measure');
+  if (!firstMeasure) throw new Error('No <measure> elements found in selected part');
 
   const attrs = firstMeasure.querySelector('attributes');
   const keyEl = attrs?.querySelector('key');
@@ -91,7 +107,7 @@ export function parseMusicXMLDoc(doc: Document): ParsedScore {
     || '';
 
   const notes: ParsedNote[] = [];
-  firstPart.querySelectorAll('measure note').forEach((noteEl) => {
+  bestPart.querySelectorAll('measure note').forEach((noteEl) => {
     const isRest = noteEl.querySelector('rest') !== null;
     const duration = parseInt(noteEl.querySelector('duration')?.textContent || '0');
     let step = '';
@@ -109,7 +125,9 @@ export function parseMusicXMLDoc(doc: Document): ParsedScore {
     const voice = noteEl.querySelector('voice')?.textContent || '1';
     const tieStart = noteEl.querySelector('tie[type="start"]') !== null;
     const tieStop = noteEl.querySelector('tie[type="stop"]') !== null;
-    notes.push({ step, alter, octave, duration, voice, isChord, isRest, tieStart, tieStop });
+    const slurStart = noteEl.querySelector('slur[type="start"]') !== null;
+    const slurStop = noteEl.querySelector('slur[type="stop"]') !== null;
+    notes.push({ step, alter, octave, duration, voice, isChord, isRest, tieStart, tieStop, slurStart, slurStop });
   });
 
   // Extract lyrics. MusicXML stores them per-note as <lyric><text>...</text></lyric>.
@@ -117,7 +135,7 @@ export function parseMusicXMLDoc(doc: Document): ParsedScore {
   // We collect them as a flat string array (one entry per lyric element, in
   // document order) so the renderer can choose how to display them.
   const lyrics: string[] = [];
-  firstPart.querySelectorAll('measure note lyric text').forEach((textEl) => {
+  bestPart.querySelectorAll('measure note lyric text').forEach((textEl) => {
     const t = textEl.textContent?.trim();
     if (t) lyrics.push(t);
   });
