@@ -19,7 +19,11 @@ function mod(n: number, m: number): number {
 }
 
 export function pitchToMidi(step: string, alter: number, octave: number, keyAlter: Record<string, number>): number {
-  const totalAlter = alter + (keyAlter[step] || 0);
+  // MusicXML <alter> is authoritative when non-zero (encoders include it for
+  // every chromatic pitch, including key-signature accidentals). Adding
+  // keyAlter on top double-counts: F# in D major → F+1+1 = F## instead of F#.
+  // Fall back to keyAlter only when <alter> was absent (=0).
+  const totalAlter = (alter !== 0) ? alter : (keyAlter[step] || 0);
   return (octave + 1) * 12 + STEP_TO_SEMITONE[step] + totalAlter;
 }
 
@@ -105,7 +109,20 @@ export function extractWesternEvents(parsed: ParsedScore): MidiEvent[] {
     allEvents.push(...processVoiceMidi(voiceNotes, keyAlter, divsPerBeat));
   }
 
-  return allEvents;
+  // Deduplicate unison voices: when multiple voices produce the exact same
+  // event (same midi, startBeat, durationBeats), keep only one. This matches
+  // the visual grid's unison dedup in bhatkhande.ts and prevents audio from
+  // playing doubled notes on multi-voice unison scores.
+  const seen = new Set<string>();
+  const deduped: MidiEvent[] = [];
+  for (const ev of allEvents) {
+    const key = `${ev.midi}|${ev.startBeat}|${ev.durationBeats}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(ev);
+  }
+
+  return deduped;
 }
 
 // Convert the Bhatkhande swara grid to MIDI events. Since each swara maps to

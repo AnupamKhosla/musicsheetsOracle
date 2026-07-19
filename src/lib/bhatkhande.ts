@@ -19,7 +19,7 @@ import {
   TAALS,
   TAAL_LABELS,
   findTaalByBeatCount,
-  saptakForOctave,
+  saptakForMidi,
   type Language,
   type TaalDef,
 } from './sargam-data';
@@ -74,6 +74,10 @@ export interface DisplayRow {
    * this swara position holds a CHORD combo — 2+ simultaneous notes merged into
    * one horizontal glyph group with a top bar + tint. False = single swara. */
   chordLinks: boolean[][][];
+  /** Parallel to cells (one per beat cell): true means a NoteInstance spans
+   * the boundary between this cell and the next — the smiley bracket `⌣`
+   * should visually continue across the cell border. */
+  crossBeatHolds: boolean[];
 }
 
 export interface NotationData {
@@ -178,6 +182,8 @@ function processVoice(
   const instances: NoteInstance[] = [];
   const midiEvents: MidiEvent[] = [];
 
+  const saMidi = (saOctave + 1) * 12 + saSemitone;
+
   let position = 0;
   let lastStartDiv = 0;
 
@@ -209,10 +215,10 @@ function processVoice(
     const ns = noteSemitone(note, keyAlter);
     const semitoneFromSa = mod(ns - saSemitone, 12);
     const swaraLabel = labels[semitoneFromSa] || labels[0];
-    const saptak = saptakForOctave(note.octave, saOctave);
+    const midi = (note.octave + 1) * 12 + ns;
+    const saptak = saptakForMidi(midi, saMidi);
     const marker = SAPTAK_MARKERS[saptak];
     const swaraText = swaraLabel + marker;
-    const midi = (note.octave + 1) * 12 + ns;
 
     // --- Tie continuation branch ---
     // A non-chord note arriving while a tie is open extends the held note's
@@ -350,6 +356,39 @@ export function convertToBhatkhande(opts: NotationOptions): NotationData {
     );
     allInstances.push(...instances);
     allMidiEvents.push(...midiEvents);
+  }
+
+  // --- Deduplicate unison voices ---
+  // When multiple voices play the exact same pitch at the same time (same
+  // midi + startDiv + endDiv), it's unison doubling — not a chord. Collapse
+  // to a single instance so the grid shows one swara, not "SS" stacked.
+  // Uses midi (absolute pitch) as key: two Sa at different octaves have
+  // different midi values and are correctly kept as separate saptak-marked
+  // swaras. Only truly identical pitches are deduplicated.
+  {
+    const seen = new Set<string>();
+    const deduped: NoteInstance[] = [];
+    for (const inst of allInstances) {
+      const key = `${inst.midi}|${inst.startDiv}|${inst.endDiv}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(inst);
+    }
+    allInstances.length = 0;
+    allInstances.push(...deduped);
+  }
+
+  {
+    const seen = new Set<string>();
+    const deduped: MidiEvent[] = [];
+    for (const ev of allMidiEvents) {
+      const key = `${ev.midi}|${ev.startBeat}|${ev.durationBeats}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      deduped.push(ev);
+    }
+    allMidiEvents.length = 0;
+    allMidiEvents.push(...deduped);
   }
 
   // --- Mark "underSlur" per voice, in time order ---
@@ -527,6 +566,22 @@ export function convertToBhatkhande(opts: NotationOptions): NotationData {
     chordLinksPerBeat.push([chordLinks]);
   }
 
+  // --- Cross-beat hold detection ---
+  // A NoteInstance that spans a beat boundary (startDiv < boundary && endDiv >
+  // boundary) means the held note continues from one cell into the next. Mark
+  // both cells so the renderer draws a smiley bracket across the border.
+  const crossBeatHoldsGlobal: boolean[] = new Array(totalBeats).fill(false);
+  for (let b = 0; b < totalBeats - 1; b++) {
+    const boundaryDiv = (b + 1) * divsPerBeat;
+    const spans = allInstances.some(
+      (inst) => inst.startDiv < boundaryDiv && inst.endDiv > boundaryDiv,
+    );
+    if (spans) {
+      crossBeatHoldsGlobal[b] = true;
+      crossBeatHoldsGlobal[b + 1] = true;
+    }
+  }
+
   // --- Chord event count (mirror of previous behaviour) ---
   const beatCounts: Record<number, number> = {};
   for (const e of allMidiEvents) {
@@ -545,13 +600,14 @@ export function convertToBhatkhande(opts: NotationOptions): NotationData {
     const meendLinks = meendLinksPerBeat.slice(i, i + ROW_BEATS);
     const holdLinks = holdLinksPerBeat.slice(i, i + ROW_BEATS);
     const chordLinks = chordLinksPerBeat.slice(i, i + ROW_BEATS);
+    const crossBeatHolds = crossBeatHoldsGlobal.slice(i, i + ROW_BEATS);
     const beatMarks = cells.map((_, j) => {
       const globalIdx = i + j;
       const cycleLen = cycleBeats ?? 16;
       if (globalIdx % cycleLen === 0) return SAM;
       return HINDI_NUMS[mod(globalIdx % cycleLen, HINDI_NUMS.length)];
     });
-    rows.push({ cells, beatMarks, meendLinks, holdLinks, chordLinks });
+    rows.push({ cells, beatMarks, meendLinks, holdLinks, chordLinks, crossBeatHolds });
   }
 
   let taalNameLabel = '';

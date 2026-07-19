@@ -38,17 +38,19 @@ export const SAPTAKS: SaptakKeyword[] = [
 ];
 
 // Saptak markers, layered on top of the swara glyph. Index = saptak idx (0..4).
-//   0 ati-mandra: two dots below
-//   1 mandra:     one dot below
+// Uses Unicode COMBINING marks so they attach to any base glyph (Latin or
+// Devanagari) instead of rendering as a separate spacing character.
+//   0 ati-mandra: two dots below (U+0323 × 2)
+//   1 mandra:     one dot below  (U+0323)
 //   2 madhyam:    no marker
-//   3 taar:       chandrabindu
-//   4 ati-taar:   double chandrabindu
+//   3 taar:       one dot above  (U+0307)
+//   4 ati-taar:   two dots above (U+0307 × 2)
 export const SAPTAK_MARKERS: Record<SaptakKeyword, string> = {
   'ati-mandra': '\u0323\u0323',
   'mandra':     '\u0323',
   'madhyam':    '',
-  'taar':       '\u0902',
-  'ati-taar':   '\u0902\u0902',
+  'taar':       '\u0307',
+  'ati-taar':   '\u0307\u0307',
 };
 
 export type Language = 'english' | 'hindi' | 'bangla';
@@ -161,7 +163,25 @@ export function findTaalByBeatCount(beats: number): TaalDef | null {
   return TAALS.find((t) => t.numBeats === beats) || null;
 }
 
-// Get the saptak for a note given its absolute octave and Sa's octave.
+// Get the saptak for a note given its absolute MIDI pitch and Sa's absolute
+// MIDI pitch. Indian saptak boundaries are at Sa, NOT at Western octave
+// boundaries (C). The madhya saptak spans [Sa, Sa+12). Notes below Sa are
+// mandra regardless of their Western octave number.
+//
+// Reference: Wikipedia "Svara" — "the number of dots above or below the svara
+// symbol means the number of octaves above or below the corresponding svara in
+// madhya saptak (middle octave)."
+export function saptakForMidi(noteMidi: number, saMidi: number): SaptakKeyword {
+  const diff = noteMidi - saMidi;
+  if (diff < -12) return 'ati-mandra';
+  if (diff < 0) return 'mandra';
+  if (diff < 12) return 'madhyam';
+  if (diff < 24) return 'taar';
+  return 'ati-taar';
+}
+
+// Legacy: octave-based saptak (WRONG for notes near Sa that cross Western
+// octave boundaries). Kept for reference only — use saptakForMidi instead.
 export function saptakForOctave(noteOctave: number, saOctave: number): SaptakKeyword {
   const diff = noteOctave - saOctave;
   if (diff <= -2) return 'ati-mandra';

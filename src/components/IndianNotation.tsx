@@ -108,6 +108,7 @@ export default function IndianNotation({
                 meendLinks={row.meendLinks}
                 holdLinks={row.holdLinks}
                 chordLinks={row.chordLinks}
+                crossBeatHolds={row.crossBeatHolds}
                 rowStartBeat={ri * 8}
                 currentBeat={currentBeat}
               />
@@ -129,6 +130,7 @@ function RowWithHeader({
   meendLinks,
   holdLinks,
   chordLinks,
+  crossBeatHolds,
   rowStartBeat,
   currentBeat,
 }: {
@@ -137,6 +139,7 @@ function RowWithHeader({
   meendLinks: boolean[][][];
   holdLinks: boolean[][][];
   chordLinks: boolean[][][];
+  crossBeatHolds: boolean[];
   rowStartBeat: number;
   currentBeat: number;
 }) {
@@ -165,10 +168,13 @@ function RowWithHeader({
           const meend = meendLinks[i] || [];
           const hold = holdLinks[i] || [];
           const chord = chordLinks[i] || [];
+          const cbHold = crossBeatHolds[i] || false;
+          const cbHoldStart = cbHold && (i === 0 || !crossBeatHolds[i - 1]);
+          const cbHoldEnd = cbHold && (i === crossBeatHolds.length - 1 || !crossBeatHolds[i + 1]);
           return (
             <td
               key={i}
-              className={`bhatkhande-swar-cell ${isRest ? 'bhatkhande-rest' : ''} ${isCurrent(globalBeat) ? 'bhatkhande-current' : ''}`}
+              className={`bhatkhande-swar-cell ${isRest ? 'bhatkhande-rest' : ''} ${isCurrent(globalBeat) ? 'bhatkhande-current' : ''} ${cbHold ? 'bhatkhande-cross-hold' : ''} ${cbHoldStart ? 'bhatkhande-cross-hold-start' : ''} ${cbHoldEnd ? 'bhatkhande-cross-hold-end' : ''}`}
             >
               {cell.map((subRow, si) => {
                 const subMeend = meend[si] || [];

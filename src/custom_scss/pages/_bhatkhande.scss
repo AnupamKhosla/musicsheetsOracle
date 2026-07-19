@@ -183,9 +183,11 @@
         // subtle tint helps the eye group them apart from neighbours. We
         // intentionally do NOT draw a top bar — adjacent chord-rep spans
         // would visually merge into a false "gridline" across the row.
+        // Font reduced 25% so multi-note combos (e.g. "SGDP") stay compact.
         &.bhatkhande-chord {
             background: rgba(225, 29, 72, 0.10);
             border-radius: 3px;
+            font-size: 1.01rem;
         }
 
         // ---- Hold bracket BELOW swaras: "smiley bracket" `⌣` connecting
@@ -209,6 +211,49 @@
     .bhatkhande-rest {
         color: rgba(225, 29, 72, 0.2);
     font-size: 1.5rem;
+    }
+
+    // ---- Cross-beat hold bracket: smiley `⌣` spanning cell boundaries ----
+    // When a NoteInstance spans a beat boundary, both cells get this class.
+    // The bracket is drawn on the <td> itself so it can reach the cell edges.
+    td.bhatkhande-cross-hold {
+        position: relative;
+
+        &::after {
+            content: '';
+            position: absolute;
+            bottom: 1px;
+            left: 0;
+            right: 0;
+            height: 0.35em;
+            border: 1.5px solid #0F766E;
+            border-top: none;
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+    }
+
+    // First cell in a hold chain: bracket starts from centre, extends right
+    td.bhatkhande-cross-hold-start::after {
+        left: 35%;
+        border-left: none;
+        border-radius: 0 0 0.6em 0 / 0 0 0.35em 0;
+    }
+
+    // Last cell in a hold chain: bracket comes from left, ends at centre
+    td.bhatkhande-cross-hold-end::after {
+        right: 35%;
+        border-right: none;
+        border-radius: 0 0 0 0.6em / 0 0 0 0.35em;
+    }
+
+    // Single-cell chain (both start and end): centred smiley
+    td.bhatkhande-cross-hold-start.bhatkhande-cross-hold-end::after {
+        left: 20%;
+        right: 20%;
+        border-left: 1.5px solid #0F766E;
+        border-right: 1.5px solid #0F766E;
+        border-radius: 0 0 50% 50% / 0 0 100% 100%;
     }
 
     .bhatkhande-current {

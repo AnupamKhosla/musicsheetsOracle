@@ -1,9 +1,8 @@
 import { getDb } from '@/lib/db';
-import { decompressXml } from '@/lib/compressXml';
 import Link from 'next/link';
 import SearchForm from '@/components/SearchForm';
 import PostSummary from '@/components/PostSummary';
-import MusicSheetViewer from '@/components/MusicSheetViewer';
+import SideBySideViewer from '@/components/SideBySideViewer';
 
 export default async function HomePage() {
   const db = await getDb();
@@ -15,20 +14,25 @@ export default async function HomePage() {
     ])
     .toArray();
 
-  const exampleSheet = await db.collection('musicsheets').findOne({ sheetName: 'chopin_op9' });
-  let exampleXml = '';
-  if (exampleSheet?.xmlGz) {
-    exampleXml = decompressXml(exampleSheet.xmlGz.buffer);
-  }
+  const exampleSheet = await db.collection('musicsheets').findOne(
+    { sheetName: { $regex: 'Jabase', $options: 'i' }, xmlGz: { $exists: true } },
+    { projection: { _id: 1, sheetName: 1, scale: 1 }, sort: { date: -1 as const } }
+  );
+  const exampleId = exampleSheet?._id?.toString() || '';
+  const exampleName = exampleSheet?.sheetName || 'Raag Bhupali';
+  const exampleScale = exampleSheet?.scale || 'Bhoopali';
 
   return (
     <>
       <SearchForm />
 
-      <h2 className="text-3xl font-bold mt-6 text-center">Example music sheet</h2>
+      <h2 className="text-3xl font-bold mt-6 text-center">{exampleName} — Western &amp; Bhatkhande</h2>
+      <p className="text-center text-slate-500 mt-2 mb-4 text-sm">
+        {exampleScale} — a beginner-friendly raga taught in every Indian music class, shown side by side
+      </p>
       <section className="relative">
-        <div className="container relative min-h-[40rem]">
-          {exampleXml && <MusicSheetViewer xmlContent={exampleXml} sheetName="Chopin Op. 9" />}
+        <div className="container relative">
+          {exampleId && <SideBySideViewer sheetId={exampleId} sheetName={exampleName} />}
         </div>
       </section>
 

@@ -51,7 +51,7 @@ export default function PlayerControls({
 
   const startBeatTracking = (offsetBeats: number = 0) => {
     if (!onBeatChange) return;
-    startTimeRef.current = performance.now() - (offsetBeats * 60 / bpm);
+    startTimeRef.current = performance.now() - (offsetBeats * 60 / bpm * 1000);
     bpmRef.current = bpm;
     let lastBeat = Math.floor(offsetBeats) - 1;
     const tick = () => {
