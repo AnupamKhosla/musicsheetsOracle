@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import * as Tone from 'tone';
 import type { MidiEvent } from '@/lib/midi';
 import { playEvents, preloadSamples, type PlaybackHandle, type Voice } from '@/lib/audio';
 
@@ -34,8 +35,8 @@ export default function PlayerControls({
   const [selectedVoice, setSelectedVoice] = useState<Voice>(voice);
   const handleRef = useRef<PlaybackHandle | null>(null);
   const animRef = useRef<number | null>(null);
-  const startTimeRef = useRef<number>(0);
   const bpmRef = useRef<number>(defaultBpm);
+  const offsetRef = useRef<number>(0); // beat offset the current Transport run represents
   const pausePositionRef = useRef<number>(0); // beat position when paused
 
   useEffect(() => {
@@ -49,14 +50,16 @@ export default function PlayerControls({
     };
   }, []);
 
+  // The highlight must share the audio's clock. Audio is scheduled on
+  // Tone.Transport; reading performance.now() here drifts against it, so we
+  // derive the beat from Tone.Transport.seconds instead — same clock, no drift.
   const startBeatTracking = (offsetBeats: number = 0) => {
     if (!onBeatChange) return;
-    startTimeRef.current = performance.now() - (offsetBeats * 60 / bpm * 1000);
+    offsetRef.current = offsetBeats;
     bpmRef.current = bpm;
     let lastBeat = Math.floor(offsetBeats) - 1;
     const tick = () => {
-      const elapsedSec = (performance.now() - startTimeRef.current) / 1000;
-      const beat = elapsedSec * (bpmRef.current / 60);
+      const beat = offsetRef.current + Tone.Transport.seconds * (bpmRef.current / 60);
       if (Math.floor(beat) !== lastBeat) {
         lastBeat = Math.floor(beat);
         onBeatChange(beat);
@@ -127,8 +130,7 @@ export default function PlayerControls({
 
   const pause = () => {
     if (state !== 'playing') return;
-    const elapsedSec = (performance.now() - startTimeRef.current) / 1000;
-    pausePositionRef.current = elapsedSec * (bpm / 60);
+    pausePositionRef.current = offsetRef.current + Tone.Transport.seconds * (bpm / 60);
     handleRef.current?.pause();
     setState('paused');
     stopBeatTracking(false);

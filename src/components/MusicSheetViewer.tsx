@@ -50,10 +50,6 @@ export default function MusicSheetViewer({
     return () => { cancelled = true; };
   }, [fileUrl, xmlContent]);
 
-  useEffect(() => {
-    setCurrentBeat(-1);
-  }, [notation]);
-
   return (
     <div>
       {sheetName && <h2 className="text-2xl font-bold text-center mb-4">{sheetName}</h2>}
@@ -95,16 +91,12 @@ export default function MusicSheetViewer({
         </div>
       )}
 
-      {notation === 'western' && (
-        <div className="min-h-[40rem]">
-          <OSMDWrapper file={fileUrl} xmlContent={xmlContent} currentBeat={currentBeat} />
-        </div>
-      )}
-      {notation === 'indian' && (
-        <div className="min-h-[40rem]">
-          <IndianNotation fileUrl={fileUrl} xmlContent={xmlContent} currentBeat={currentBeat} />
-        </div>
-      )}
+      <div className="min-h-[40rem]" style={{ display: notation === 'western' ? 'block' : 'none' }}>
+        <OSMDWrapper file={fileUrl} xmlContent={xmlContent} currentBeat={currentBeat} />
+      </div>
+      <div className="min-h-[40rem]" style={{ display: notation === 'indian' ? 'block' : 'none' }}>
+        <IndianNotation fileUrl={fileUrl} xmlContent={xmlContent} currentBeat={currentBeat} />
+      </div>
     </div>
   );
 }

@@ -1,0 +1,110 @@
+/* _home.scss — homepage ambience & micro-interactions (no images) */
+
+/* Faint five-line staff pattern behind the opening section. Pure CSS, so it
+   costs zero requests and stays crisp at any width. */
+.staff-lines {
+    background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 22px,
+        rgba(190, 18, 60, 0.05) 22px,
+        rgba(190, 18, 60, 0.05) 23px
+    );
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.15) 70%, transparent);
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.15) 70%, transparent);
+}
+
+/* Utility to hide the horizontal scrollbar on the raga strip while keeping it
+   scrollable. */
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* ── Meend nav tabs ─────────────────────────────────────────────────────
+   A nav item styled as a Bhatkhande meend: an arc that draws itself under the
+   label on hover/open, ending in a little notehead that pops in. */
+.meend-nav {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    padding: 10px 2px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #374151;
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:hover,
+    &.is-active {
+        color: #be123c;
+    }
+
+    .meend-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        line-height: 1;
+    }
+
+    .meend-caret {
+        font-size: 16px;
+        line-height: 1;
+        transition: transform 0.25s ease;
+    }
+
+    .meend-svg {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 1px;
+        width: 100%;
+        height: 6px;
+        overflow: visible;
+    }
+
+    .meend-arc {
+        stroke-dasharray: 100;
+        stroke-dashoffset: 100;
+        transition: stroke-dashoffset 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .meend-dot {
+        transform: scale(0);
+        transform-origin: 97px 3.2px;
+        transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) 0.18s;
+    }
+
+    &:hover .meend-arc,
+    &.is-active .meend-arc {
+        stroke-dashoffset: 0;
+    }
+
+    &:hover .meend-dot,
+    &.is-active .meend-dot {
+        transform: scale(1);
+    }
+}
+
+/* The conversion demo's Western staff. OSMD measures its container width, so
+   this must be a full-width block — flexing/centering it collapses the sheet
+   to zero width (the "width not > 0" render error). */
+.demo-western {
+    width: 100%;
+    min-height: 70px;
+
+    > div {
+        width: 100%;
+    }
+}

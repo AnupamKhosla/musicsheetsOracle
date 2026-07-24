@@ -3,6 +3,7 @@ import './globals.scss';
 import '@iconscout/unicons/css/line.css';
 import Navigation from '@/components/Navigation';
 import LocatorDev from '@/components/LocatorDev';
+import MusicAmbient from '@/components/ambient/MusicAmbient';
 
 export const metadata: Metadata = {
   title: 'Musicsheets | Indian Ragas',
@@ -24,7 +25,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <LocatorDev />
-        <div className="app-container bg-slate-100 min-h-screen flex flex-col">
+        <MusicAmbient />
+        <div className="app-container relative z-10 min-h-screen flex flex-col">
           <Navigation />
           <main className="flex-1 flex flex-col">{children}</main>
           <footer className="py-3 bg-slate-200 mt-auto">

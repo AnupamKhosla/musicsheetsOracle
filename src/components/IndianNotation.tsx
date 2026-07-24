@@ -73,8 +73,6 @@ export default function IndianNotation({
 
   return (
     <div className="bhatkhande-notation">
-      <div className="bhatkhande-notice">⚠ Experimental — may contain translation errors</div>
-
       {!controlsHidden && (
         <div className="bhatkhande-controls">
           <label>

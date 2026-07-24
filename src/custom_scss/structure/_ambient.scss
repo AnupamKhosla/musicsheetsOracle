@@ -1,0 +1,159 @@
+/* _ambient.scss — site-wide musical atmosphere. Pure CSS so it costs nothing
+   to ship and stays crisp on every device. */
+
+/* ── Fixed background layer (staff lines + drifting note glyphs) ───────── */
+.ambient {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+/* faint five-line staff wash across the whole site */
+.ambient-staff {
+    position: absolute;
+    inset: 0;
+    background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 30px,
+        rgba(190, 18, 60, 0.035) 30px,
+        rgba(190, 18, 60, 0.035) 31px
+    );
+    mask-image: radial-gradient(ellipse 120% 90% at 50% 0%, rgba(0, 0, 0, 0.8), transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 120% 90% at 50% 0%, rgba(0, 0, 0, 0.8), transparent 75%);
+}
+
+/* soft tonal glows, like light on a resonating body */
+.ambient-glow-a,
+.ambient-glow-b {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(70px);
+}
+.ambient-glow-a {
+    width: 460px;
+    height: 460px;
+    top: -140px;
+    inset-inline-end: -120px;
+    background: rgba(255, 228, 230, 0.55);
+}
+.ambient-glow-b {
+    width: 380px;
+    height: 380px;
+    bottom: -160px;
+    inset-inline-start: -140px;
+    background: rgba(254, 243, 199, 0.4);
+}
+
+/* drifting note & sargam glyphs — bobbing gently in place */
+.float-note {
+    position: absolute;
+    line-height: 1;
+    user-select: none;
+    opacity: 0;
+    animation: note-bob ease-in-out infinite;
+    will-change: transform, opacity;
+    filter: blur(0.4px);
+}
+@keyframes note-bob {
+    0%, 100% {
+        transform: translateY(0) rotate(-6deg);
+        opacity: calc(var(--o, 0.07) * 0.4);
+    }
+    50% {
+        transform: translateY(-16px) rotate(5deg);
+        opacity: var(--o, 0.07);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .float-note,
+    .tanpura-string,
+    .eq-bar,
+    .wave-divider path {
+        animation: none !important;
+    }
+}
+
+/* ── Tanpura strings (opening section) ───────────────────────────────────
+   Four drone strings; a pluck of light travels along each while it breathes
+   vertically — different lengths & phases so they never sync. */
+.tanpura-strings {
+    position: absolute;
+    inset-inline: 0;
+    top: 18%;
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+    opacity: 0.5;
+}
+.tanpura-string {
+    height: 1px;
+    width: 100%;
+    background:
+        linear-gradient(90deg, transparent, rgba(190, 18, 60, 0.28) 30%, rgba(217, 119, 6, 0.3) 55%, transparent 90%);
+    background-size: 220% 100%;
+    animation:
+        string-glow 6s linear infinite,
+        string-breathe 3.4s ease-in-out infinite;
+    transform-origin: center;
+}
+.tanpura-string:nth-child(1) { animation-delay: 0s, 0s; }
+.tanpura-string:nth-child(2) { animation-delay: -1.6s, -0.8s; opacity: 0.8; }
+.tanpura-string:nth-child(3) { animation-delay: -3.1s, -1.9s; opacity: 0.65; }
+.tanpura-string:nth-child(4) { animation-delay: -4.4s, -2.6s; opacity: 0.5; }
+
+@keyframes string-glow {
+    0%   { background-position: 130% 0; }
+    100% { background-position: -60% 0; }
+}
+@keyframes string-breathe {
+    0%, 100% { transform: translateY(0) scaleY(1); }
+    50%      { transform: translateY(2px) scaleY(1.6); }
+}
+
+/* ── Live equalizer bars ───────────────────────────────────────────────── */
+.eq {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 14px;
+}
+.eq-bar {
+    width: 3px;
+    border-radius: 2px;
+    background: currentColor;
+    transform-origin: bottom;
+    animation: eq-bounce 1s ease-in-out infinite;
+    height: 100%;
+}
+.eq-bar:nth-child(1) { animation-delay: 0s; }
+.eq-bar:nth-child(2) { animation-delay: -0.35s; }
+.eq-bar:nth-child(3) { animation-delay: -0.6s; }
+.eq-bar:nth-child(4) { animation-delay: -0.2s; }
+.eq-bar:nth-child(5) { animation-delay: -0.8s; }
+@keyframes eq-bounce {
+    0%, 100% { transform: scaleY(0.3); }
+    50%      { transform: scaleY(1); }
+}
+
+/* ── Waveform section divider ─────────────────────────────────────────── */
+.wave-divider {
+    display: block;
+    width: 100%;
+    height: 26px;
+    color: rgba(190, 18, 60, 0.35);
+}
+.wave-divider path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-dasharray: 6 7;
+    animation: wave-flow 9s linear infinite;
+}
+@keyframes wave-flow {
+    to { stroke-dashoffset: -130; }
+}

@@ -7,6 +7,19 @@
 - **Process**: `/Users/anupamkhosla/.nvm/versions/node/v24.15.0/lib/node_modules/opencode-ai/bin/.opencode`
 - **Rule**: I am NOT obsolete. The user is actively running this tool. Do not claim otherwise.
 
+## Project Mission (Ultimate Goal)
+Build **musicsheets.site** into the definitive free library of Indian classical (Hindustani) music sheets.
+
+**What makes it unique**: every sheet renders **Western staff + Bhatkhande sargam notation SIDE-BY-SIDE** with **beat-synced playback** — no other free site does this.
+
+**Non-negotiables**:
+- **Mobile-first** — most traffic is mobile; the Bhatkhande player must be visible immediately on small screens.
+- **Functional over decorative** — showcase the conversion/playback capability, not stock imagery. Save space for search, filters, and sheets.
+- **Musical feel** — the whole UI should feel like music (staff lines, strings, notes, sargam), not a generic template.
+- **Fast + indexed** — performance and Google discoverability matter.
+
+**Later**: dark mode, membership/monetization, `/notation-guide`, bulk import of 10k+ sheets.
+
 ## Security & Privacy Rules
 
 ### Forbidden Operations
@@ -106,13 +119,8 @@ When your are openclaw find tools skills agent etc which can cross check outdate
 - Always use modern ES module syntax (`.mjs`, `import`/`export`). Never use CommonJS (`.cjs`, `require()`).
 - Use Next.js `<Link>` for all internal navigation, never `<a>` tags.
 
-### Memory & Context Persistence (MANDATORY)
-- **Cross-session memory**: `docs/MEMORY.md` is the persistent memory file
-- **Rule - START**: Read `docs/MEMORY.md` at the start of EVERY conversation before doing anything else
-- **Rule - UPDATE**: ONLY update `docs/MEMORY.md` when the user EXPLICITLY asks you to. Do NOT propose updates automatically. Do NOT update on every conversation. Wait for user instruction.
-- **Rule - CONTENT**: When updating, only include IMPORTANT information: major decisions, architecture changes, infrastructure setup, bug fixes, user preferences. Do NOT log routine tasks, minor edits, or trivial conversations.
-- **Rule - FORMAT**: Each entry must include: date, category, description, and any relevant file paths or commands
-- **Rule - CHECK**: When user references "past conversations" or "you said before", check `docs/MEMORY.md` and `docs/hallucinations.md`
+### Memory
+This project uses **Supermemory** (cloud) for persistent memory. Always pass `containerTag: "musicsheetsOracle"` so its memory stays separate from other projects. The full memory convention (when to recall / save) is defined globally in `~/.config/opencode/AGENTS.md`. Local structured log: `docs/MEMORY.md`.
 
 ### Documentation
 - Project documentation (Jekyll/GitHub Pages): `docs/project/`

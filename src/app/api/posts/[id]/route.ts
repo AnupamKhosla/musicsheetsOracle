@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { ObjectId } from 'mongodb';
 import { getDb } from '@/lib/db';
-import { decompressXml } from '@/lib/compressXml';
+import { decompressXmlFromDb } from '@/lib/compressXml';
 
 export async function GET(
   request: NextRequest,
@@ -23,7 +23,12 @@ export async function GET(
   const output: any = { ...rest, _id: result._id.toString() };
 
   if (xmlGz) {
-    output.xmlContent = decompressXml(xmlGz.buffer);
+    try {
+      output.xmlContent = await decompressXmlFromDb(xmlGz.buffer ?? xmlGz);
+    } catch {
+      output.xmlContent = null;
+      output.xmlError = 'Failed to decompress sheet data';
+    }
   }
 
   return Response.json(output);

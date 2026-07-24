@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { Binary, ObjectId } from 'mongodb';
 import { getDb } from '@/lib/db';
-import { compressXml } from '@/lib/compressXml';
+import { compressXml, validateMusicXml, validateMxlBuffer } from '@/lib/compressXml';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   const results = await collection
     .find(query, { sort: ['date', 'asc'] } as any)
-    .project({ xmlGz: 0, password: 0 })
+    .project({ xmlGz: 0 })
     .skip((page - 1) * 6)
     .limit(6)
     .toArray();
@@ -33,7 +33,8 @@ export async function POST(request: NextRequest) {
 
   const ct = request.headers.get('content-type') || '';
 
-  let sheetName = '', Artist = 'Unknown', Genres = '', scale = 'C', password = '', source = '', xmlContent = '';
+  let sheetName = '', Artist = 'Unknown', Genres = '', scale = 'C', source = '';
+  let xmlBuffer: Buffer | null = null;
 
   if (ct.includes('multipart/form-data') || ct.includes('application/x-www-form-urlencoded')) {
     const fd = await request.formData();
@@ -41,11 +42,19 @@ export async function POST(request: NextRequest) {
     Artist = (fd.get('Artist') as string) || 'Unknown';
     Genres = (fd.get('Genres') as string) || '';
     scale = (fd.get('scale') as string) || 'C';
-    password = (fd.get('password') as string) || '';
     source = (fd.get('source') as string) || '';
     const file = fd.get('file') as File | null;
     if (file) {
-      xmlContent = await file.text();
+      const bytes = Buffer.from(await file.arrayBuffer());
+      if (validateMxlBuffer(bytes)) {
+        xmlBuffer = bytes;
+      } else {
+        const text = bytes.toString('utf-8');
+        if (!validateMusicXml(text)) {
+          return Response.json({ error: 'Invalid file: must be MusicXML (.xml) or compressed MXL (.mxl)' }, { status: 400 });
+        }
+        xmlBuffer = compressXml(text);
+      }
     }
   } else {
     const body = await request.json();
@@ -53,9 +62,18 @@ export async function POST(request: NextRequest) {
     Artist = body.Artist || 'Unknown';
     Genres = body.Genres || '';
     scale = body.scale || 'C';
-    password = body.password || '';
     source = body.source || '';
-    xmlContent = body.xmlContent || '';
+    const xmlContent: string = body.xmlContent || '';
+    if (xmlContent) {
+      if (!validateMusicXml(xmlContent)) {
+        return Response.json({ error: 'Invalid xmlContent: must be valid MusicXML' }, { status: 400 });
+      }
+      xmlBuffer = compressXml(xmlContent);
+    }
+  }
+
+  if (!sheetName) {
+    return Response.json({ error: 'sheetName is required' }, { status: 400 });
   }
 
   const doc: any = {
@@ -64,12 +82,11 @@ export async function POST(request: NextRequest) {
     Genres,
     scale,
     date: new Date(),
-    password,
     source,
   };
 
-  if (xmlContent) {
-    doc.xmlGz = new Binary(compressXml(xmlContent));
+  if (xmlBuffer) {
+    doc.xmlGz = new Binary(xmlBuffer);
   }
 
   const result = await collection.insertOne(doc);

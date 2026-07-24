@@ -2,7 +2,9 @@
 @use '../custom_scss/general';
 @use '../custom_scss/structure/topnav';
 @use '../custom_scss/structure/footer';
+@use '../custom_scss/structure/ambient';
 @use '../custom_scss/pages/bhatkhande';
+@use '../custom_scss/pages/home';
 
 @tailwind base;
 @tailwind components;
@@ -14,6 +16,8 @@ html {
 
 body {
   margin: 0;
+  /* warm off-white base that lets the fixed musical ambience read on top */
+  background-color: #f8f7f5;
 }
 
 *,

@@ -1,21 +1,27 @@
 # Persistent Memory for OpenCode Conversations
 
-## Purpose
-This file serves as persistent memory across OpenCode chat sessions. Since the AI does not retain context between conversations, this document maintains continuity by recording decisions, preferences, project state, and important context.
+## Current State
+- **Last Updated**: 2026-07-24
+- **Summary**: DB storage unified to canonical gzip Binary. Homepage redesigned (bento grid, live player, no bg image). Two-tier nav (raga strip + search filters). Player tab-switch highlight bug fixed. 284/285 sheets verified correct format, 1 re-imported.
 
-## Rules for AI Agents
-- **At the start of every conversation**: Read this file first to understand current project state and past decisions
-- **During conversations**: Reference this file when making decisions that build on past work
-- **At the end of significant conversations**: Propose updates to this file to capture new decisions, changes, or important context
+## Pending / Next Steps
+- [ ] **Chinese sheets → English**: 6 sheets still have Chinese names/lyrics (夜上海, 百鳥和鳴, 花好月圓, 郊游, 甜蜜蜜, 知心客). Need English names + translated lyrics in DB.
+- [ ] **Assign correct ragas/genres**: Many sheets have `scale: 'C'` and `Genres: 'Classical'` — need proper raga/genre assignment.
+- [ ] **Fetch Indian raga-based public sheets**: Find free MusicXML of Indian compositions, upload to DB with lyrics.
+- [ ] **SEO / indexing**: 52 duplicate pages without canonical, 15 404s, 2 5xx. Add canonical tags, sitemap, fix redirects.
+- [ ] **Deploy pipeline broken**: `ops/scripts/deploy.sh` still references `react-scripts build` (CRA-era). Needs update to `next build`. VPS must be updated manually until fixed.
+- [ ] **Sample DBs**: Drop `sample_*` from Atlas (needs Atlas UI — app user lacks dropDatabase permission).
+- [ ] **Dark mode toggle**: Planned for later. Currently light-only.
+- [ ] **`/notation-guide` page**: Documented Bhatkhande system for users.
+- [ ] **Conversion logic audit**: Chords, same-note, cross-beat holds — basic checks pass, needs human verification by playing multiple sheets.
 
-## Project State
-
-### Current Status
-- **Last Updated**: 2026-07-18
-- **Active Branches**: master
-- **Current Focus**: Notation converter rewrite — `crossBeatHold` removed (vertical-bar continuation disliked), replaced with `chordLinks` (chord-combo rule). One sub-row per beat cell; simultaneous notes merge into combos with subtle tint. Three bug fixes applied (double-counted keyAlter, false top-bar gridline, Devanagari combining marks). Outstanding: human verification by playing + testing multiple sheets; `/notation-guide` page; bulk import of 10k+ sheets.
-
-### Recent Decisions
+## Recent Decisions
+- **DB canonical format**: Raw gzip bytes in MongoDB `Binary`. `compressXml()` returns `Buffer`, not base64 string. `decompressXmlFromDb()` handles gzip/MXL/base64/plain XML with magic-byte detection.
+- **Schema validation**: MongoDB `$jsonSchema` on `musicsheets` collection — `sheetName` required, `xmlGz` must be `binData`. `validationAction: 'warn'` (non-blocking).
+- **`password` field removed**: Per-sheet password was dead code. Delete auth uses `process.env.DELETE_KEY`. Future: separate `admins` collection if multi-admin needed.
+- **Homepage**: Bento grid, functional-first, no stock images. CSS staff-line ambient bg. Light theme. Sargam motif strip. Live SideBySideViewer as opener.
+- **Navigation**: Two-tier — tier 1 = raga/genre chips (primary), tier 2 = search with filters (song, artist, raga select, genre select).
+- **Player fix**: Removed `setCurrentBeat(-1)` on tab switch. Both Western/Indian views stay mounted (CSS display toggle) so playback highlight persists across tabs.
 - Using PM2 for process management
 - Using Nginx as reverse proxy (configured and deployed)
 - Using Let's Encrypt for SSL (installed, auto-renewing)
@@ -163,9 +169,58 @@ TEMPLATE for new entries (copy and fill):
   - **Files**: `docs/notation-spec.md`
   - **Test sheet**: `/post/6a49f36e32c43ef5e06381d7` (Kenek-kenek Ode); notes 56-58 = three C notes dur=2 spanning beats 13/14/15 of row 5
 
+- **Date**: 2026-07-19
+  - **Category**: code
+  - **Description**: Major converter + player fixes (commit `3a17a74`):
+    1. **Saptak calculation**: replaced `saptakForOctave(noteOctave, saOctave)` with `saptakForMidi(noteMidi, saMidi)`. Old code compared Western octave numbers — WRONG because Indian saptak boundaries are at Sa, not at C. New code uses absolute MIDI distance: diff<0 → mandra, 0≤diff<12 → madhya, diff≥12 → taar.
+    2. **Saptak markers**: replaced `\u0902` (Devanagari Anusvara — a SPACING character that renders as separate "0" glyph after Latin letters) with `\u0307` (COMBINING DOT ABOVE — attaches to any base glyph). Fixes "S0" rendering bug.
+    3. **Unison dedup**: when multiple voices play identical pitch at identical time (same midi+startDiv+endDiv), collapse to single instance. Prevents "SS" stacking on multi-voice unison scores (e.g. National Anthem voices 1+5). Applied in both `bhatkhande.ts` (visual) and `midi.ts` (audio).
+    4. **Cross-beat holds**: implemented `crossBeatHolds: boolean[]` per DisplayRow. Detects NoteInstances spanning beat boundaries, marks both cells. Renderer draws teal smiley bracket across cell borders (start/middle/end CSS variants).
+    5. **Pause/resume**: fixed missing `* 1000` in `startBeatTracking` — `performance.now()` is milliseconds but offset was computed in seconds.
+    6. **Chord combo font**: reduced 25% (1.35rem → 1.01rem) for compact multi-note display.
+    7. **midi.ts pitchToMidi**: fixed double-counting keyAlter (same bug as bhatkhande.ts noteSemitone, was never fixed here).
+    8. **Homepage**: new `SideBySideViewer` component — shows Western + Indian side by side with shared player. Uses client-side fetch from `/api/posts/:id` (avoids RSC serialization issue with large XML strings). Currently shows "Jabase tumsana laagali" (Raag Bhupali).
+    9. **@locator/runtime**: dev-only source locator overlay (Option+click → source file).
+  - **Files**: `src/lib/bhatkhande.ts`, `src/lib/sargam-data.ts`, `src/lib/midi.ts`, `src/components/IndianNotation.tsx`, `src/components/PlayerControls.tsx`, `src/components/SideBySideViewer.tsx`, `src/components/LocatorDev.tsx`, `src/app/page.tsx`, `src/app/layout.tsx`, `src/custom_scss/pages/_bhatkhande.scss`, `docs/bhatkhande-conversion.md`
+  - **Commands**: `npx tsc --noEmit` (clean)
+
+- **Date**: 2026-07-19
+  - **Category**: bug
+  - **Description**: **DB storage format inconsistency**. Some sheets have `xmlGz` stored as gzip(base64) — works with `decompressXml()`. Others (e.g. `6a49f280d84ae812a3c3b43d` RaagBhupali_JabseTumSan) are stored as raw MXL (ZIP, magic `PK\x03\x04`) or gzip(MXL). The API route (`/api/posts/[id]`) only calls `decompressXml` (gzip-only) → returns garbage for MXL sheets. Client-side `loadMusicXmlFromUrl` in `parseMusicXML.ts` DOES handle MXL via JSZip, but the API doesn't. Fix pending: API route needs magic-byte detection (gzip vs ZIP) before decompressing. Documented in `docs/bhatkhande-conversion.md` §11.
+  - **Files**: `src/app/api/posts/[id]/route.ts` (needs fix), `docs/bhatkhande-conversion.md`
+  - **Affected sheets**: `6a49f280d84ae812a3c3b43d` (MXL format), possibly others from bulk import
+  - **Working sheets**: `64e4265638531e36b92b5f9b` (National Anthem, gzip), `64e42a8b38531e36b92b5f9d` (Jabase, gzip)
+
+- **Date**: 2026-07-19
+  - **Category**: decision
+  - **Description**: **Future architecture decisions documented**:
+    1. SSR: Move XML decompression + Bhatkhande conversion to server component. Pass only `NotationData` JSON to client (small, serializable). Eliminates client fetch round-trip.
+    2. Backend-hosted conversion (IP protection): Move `bhatkhande.ts` + `sargam-data.ts` + `parseMusicXML.ts` to private backend API. Client sends MusicXML → backend returns NotationData JSON. Algorithm never reaches browser bundle.
+    3. RSC limitation: Next.js RSC cannot serialize large XML strings as server→client props (becomes broken `$a0` reference). Client components MUST fetch XML via API route.
+  - **Files**: `docs/bhatkhande-conversion.md` §11
+
+- **Date**: 2026-07-19
+  - **Category**: code
+  - **Description**: DB cleanup: deleted 7 NO-XML ghost entries (duplicates without content). Renamed 6 Chinese-named sheets to English (夜上海→Night Shanghai, 百鳥和鳴→Birds Singing in Harmony, 花好月圓→Blooming Flowers Full Moon, 郊游→Country Outing, 甜蜜蜜→Sweet as Honey, 知心客→The Understanding Guest). Lyrics still in Chinese — needs translation or re-import.
+  - **Files**: `tmp/db-cleanup.mjs` (script)
+
+- **Date**: 2026-07-24
+  - **Category**: code
+  - **Description**: Major session — DB format unification + homepage redesign + player fix:
+    1. **DB storage unified**: `compressXml()` now returns raw gzip `Buffer`. New `decompressXmlFromDb()` with magic-byte detection (gzip/MXL/base64/plain XML). POST route validates MusicXML before accepting. All 285 sheets verified — 284 already correct, 1 (RaagBhupali) re-imported from local `.mxl`.
+    2. **Schema validation**: MongoDB `$jsonSchema` on `musicsheets` — `sheetName` required string, `xmlGz` must be `binData`. `password` field removed entirely (was dead code; delete auth uses `DELETE_KEY` env var).
+    3. **Player tab-switch bug fixed**: Removed `setCurrentBeat(-1)` on notation change. Both Western/Indian views now stay mounted (CSS `display` toggle instead of conditional render) — playback highlight persists across tabs.
+    4. **Homepage redesigned**: Bento grid layout, live SideBySideViewer as opener, sargam motif strip, raga quick-chips, stats, genre links. No background images. CSS staff-line ambient pattern. Light theme.
+    5. **Navigation rebuilt**: Two-tier — tier 1 = scrollable raga chips + genre dropdown (primary), tier 2 = search with filters (song, artist, raga select, genre select) + contribute.
+    6. **SearchForm stripped**: Removed `sheet_bg.jpg` hero. Compact filter card with raga/genre selects.
+    7. **AGENTS.md updated**: New session-tracking rules — proactive MEMORY.md updates at natural breakpoints, `## Pending / Next Steps` section mandatory.
+  - **Files**: `src/lib/compressXml.ts`, `src/lib/catalog.ts`, `src/lib/db.ts`, `src/app/api/posts/route.ts`, `src/app/api/posts/[id]/route.ts`, `src/app/page.tsx`, `src/components/Navigation.tsx`, `src/components/SearchForm.tsx`, `src/components/MusicSheetViewer.tsx`, `src/custom_scss/pages/_home.scss`, `src/app/globals.scss`, `tmp/migrate-fix-format.mjs`, `tmp/drop-sample-dbs.mjs`, `AGENTS.md`, `docs/MEMORY.md`
+  - **Commands**: `node tmp/migrate-fix-format.mjs` (284 ok, 1 fixed), `npx tsc --noEmit` (clean), dev server verified on localhost:3000
+
 ## Notes
 <!-- Add any other persistent notes, links, or reminders here -->
 - Check docs/hallucinations.md when correcting past mistakes
 - Update docs/deployment.md when infrastructure changes
 - VPS providers in use: Oracle Cloud e2.micro (primary - musicsheets.site), Hostinger (secondary), may add more
 - Goal: never lose access to the app — multiple free Cloudflare backup URLs + GitHub Pages + Firebase hosting as fallback layers
+- **DEPLOY PIPELINE BROKEN (2026-07-19)**: Live site at musicsheets.site is either not updating from git push, or is always one commit behind. The GitHub webhook → `ops/scripts/deploy.sh` pipeline (HMAC-validated, flock-locked, pm2 reload) is suspected broken after the CRA→Next.js migration. The webhook route exists at `src/app/api/webhook/route.ts` and calls `ops/scripts/deploy.sh`, but the deploy script still references `react-scripts build` (CRA-era) instead of `next build`. Needs investigation: (1) verify webhook fires on push, (2) update deploy.sh for Next.js build, (3) confirm pm2 ecosystem.config.json runs `next start` not `react-scripts start`. Until fixed, VPS must be updated manually via `git pull && npm run build && pm2 reload all`.
