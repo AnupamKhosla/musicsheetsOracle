@@ -25,7 +25,7 @@ export default async function HomePage() {
       {/* ── Opening · compact banner + live conversion demo ─────────────── */}
       <section className="relative overflow-hidden">
         <TanpuraStrings />
-        <div aria-hidden className="absolute -top-24 end-0 w-[420px] h-[420px] rounded-full bg-rose-200/30 blur-3xl pointer-events-none" />
+        <div aria-hidden className="opener-staff absolute -top-10 end-0 w-[520px] h-[220px] pointer-events-none" />
 
         <div className="container relative pt-8 pb-8">
           {/* slim banner */}

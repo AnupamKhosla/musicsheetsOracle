@@ -14,6 +14,21 @@
     -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.15) 70%, transparent);
 }
 
+/* A fragment of ruled staff tucked into the top-right of the opener — the
+   same warm brown as the page's long fold/staff lines, fading in from the
+   edge. Replaces an old pink glow. */
+.opener-staff {
+    background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0,
+        transparent 15px,
+        rgba(122, 85, 42, 0.16) 15px,
+        rgba(122, 85, 42, 0.16) 16.5px
+    );
+    mask-image: linear-gradient(to left, rgba(0, 0, 0, 0.75), transparent 78%);
+    -webkit-mask-image: linear-gradient(to left, rgba(0, 0, 0, 0.75), transparent 78%);
+}
+
 /* Utility to hide the horizontal scrollbar on the raga strip while keeping it
    scrollable. */
 .scrollbar-hide {

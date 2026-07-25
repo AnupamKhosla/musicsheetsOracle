@@ -41,12 +41,19 @@ function SearchPageInner() {
     <>
       <SearchForm />
       <div className="container relative my-16 min-h-[400px]">
-        <h3 className="text-2xl font-bold text-center">Search results</h3>
+        <div className="text-center">
+          <h3 className="font-head-ebgaramond text-3xl font-semibold text-[#3a2b1c]">Search results</h3>
+          {posts !== 'empty' && posts.length > 0 && (
+            <p className="text-sm text-[#8a6f4f] mt-1.5">
+              {resultTotal} {resultTotal === 1 ? 'sheet' : 'sheets'} found
+            </p>
+          )}
+        </div>
 
         {posts === 'empty' ? (
-          <span className="block mt-4 text-lg text-semibold text-center">Loading...</span>
+          <span className="paper-pressed block w-max mx-auto mt-6 px-6 py-3 text-[#8a6f4f]">Loading…</span>
         ) : posts.length === 0 ? (
-          <span className="block mt-4 text-lg text-semibold text-center">No results found</span>
+          <span className="paper-pressed block w-max mx-auto mt-6 px-6 py-3 text-[#8a6f4f]">No results found — try a different raga or song.</span>
         ) : (
           <>
             <div className="grid lg:grid-cols-3 md:grid-cols-2 grid-cols-1 mt-8 gap-[30px]">
