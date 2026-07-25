@@ -5,7 +5,7 @@
 // below it, with beat-synced playback of a simple raga phrase ending in a
 // chord. No network fetch — the XML is embedded so it renders instantly.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import IndianNotation from '@/components/IndianNotation';
 import PlayerControls from '@/components/PlayerControls';
@@ -58,11 +58,16 @@ const DEMO_XML = `<?xml version="1.0" encoding="UTF-8"?>
 export default function ConversionDemo() {
   const [currentBeat, setCurrentBeat] = useState(-1);
 
-  const events = useMemo<MidiEvent[]>(() => {
+  // Parse on the client only — parseMusicXMLString needs the browser DOMParser,
+  // which doesn't exist during SSR. Starting from [] and filling in via an
+  // effect keeps the server and first client render identical (no hydration
+  // mismatch on the "N notes" count), then updates after mount.
+  const [events, setEvents] = useState<MidiEvent[]>([]);
+  useEffect(() => {
     try {
-      return extractWesternEvents(parseMusicXMLString(DEMO_XML));
+      setEvents(extractWesternEvents(parseMusicXMLString(DEMO_XML)));
     } catch {
-      return [];
+      setEvents([]);
     }
   }, []);
 
