@@ -69,7 +69,7 @@ git fetch origin master
 git reset --hard origin/master
 
 log "Installing dependencies"
-npm install --include=dev
+npm install --include=dev --no-audit --no-fund
 
 log "Building Next.js app"
 if ! (npx next build); then

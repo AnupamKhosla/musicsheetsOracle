@@ -10,7 +10,13 @@ export async function GET() {
     });
   }
   const content = fs.readFileSync(LOGS_FILE, 'utf-8');
-  return new Response(content, {
+  // npm/next pad their output with blank lines; drop empty/whitespace-only
+  // lines so the live pipeline log reads as one clean, dense stream.
+  const cleaned = content
+    .split('\n')
+    .filter((line) => line.trim() !== '')
+    .join('\n');
+  return new Response(cleaned, {
     headers: { 'content-type': 'text/html; charset=utf-8' },
   });
 }
