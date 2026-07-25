@@ -63,9 +63,10 @@ log "Activating maintenance mode"
 echo "1" > "$MAINT_FILE"
 
 # Pull + install + build
-log "Git pull"
+log "Git fetch + reset --hard origin/master"
 cd "$REPO_DIR"
-git pull --ff-only origin master || log "WARN: git pull failed — continuing with existing checkout"
+git fetch origin master
+git reset --hard origin/master
 
 log "Installing dependencies"
 npm install --include=dev
