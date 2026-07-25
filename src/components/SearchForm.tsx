@@ -33,16 +33,16 @@ export default function SearchForm({ searchSubmitCallback }: { searchSubmitCallb
       <form ref={formRef} onSubmit={handleSubmit} className="p-5 bg-white rounded-2xl shadow-md border border-gray-100">
         <div className="grid lg:grid-cols-5 md:grid-cols-2 grid-cols-1 gap-3">
           <div className="relative">
-            <label htmlFor="songName" className="block text-xs font-semibold text-gray-500 mb-1.5">Song name</label>
+            <label htmlFor="songName" className="block text-sm font-semibold text-gray-500 mb-1.5">Song name</label>
             <i className="uil uil-search absolute bottom-3 start-3 text-rose-500" />
             <input name="songName" id="songName" type="text" placeholder="E.g. Jabase" className={`${fieldClass} ps-9`} />
           </div>
           <div>
-            <label htmlFor="artistName" className="block text-xs font-semibold text-gray-500 mb-1.5">Artist name</label>
+            <label htmlFor="artistName" className="block text-sm font-semibold text-gray-500 mb-1.5">Artist name</label>
             <input name="artistName" id="artistName" type="text" placeholder="E.g. Tyagaraja" className={fieldClass} />
           </div>
           <div>
-            <label htmlFor="scaleName" className="block text-xs font-semibold text-gray-500 mb-1.5">Raga / scale</label>
+            <label htmlFor="scaleName" className="block text-sm font-semibold text-gray-500 mb-1.5">Raga / scale</label>
             <select name="scaleName" id="scaleName" defaultValue="" className={fieldClass}>
               <option value="">Any raga</option>
               {RAGAS.map((r) => (
@@ -51,7 +51,7 @@ export default function SearchForm({ searchSubmitCallback }: { searchSubmitCallb
             </select>
           </div>
           <div>
-            <label htmlFor="genre" className="block text-xs font-semibold text-gray-500 mb-1.5">Genre</label>
+            <label htmlFor="genre" className="block text-sm font-semibold text-gray-500 mb-1.5">Genre</label>
             <select name="genre" id="genre" defaultValue="" className={fieldClass}>
               <option value="">Any genre</option>
               {GENRES.map((g) => (

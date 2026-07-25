@@ -119,6 +119,12 @@ When your are openclaw find tools skills agent etc which can cross check outdate
 - Always use modern ES module syntax (`.mjs`, `import`/`export`). Never use CommonJS (`.cjs`, `require()`).
 - Use Next.js `<Link>` for all internal navigation, never `<a>` tags.
 
+### Design & Accessibility Conventions
+- **Color contrast (WCAG 2.1 AA, W3C)**: every text/background pair must meet at least **4.5:1** for normal text and **3:1** for large text (≥18pt / 24px, or ≥14pt / ~19px bold). Verify against the *rendered* background, not an assumed one. Avoid low-contrast grays on white (e.g. `text-gray-400` on white ≈ 2.7:1 FAILS; use `text-gray-600` ≈ 7.5:1).
+- **Minimum body/label size**: no visible text smaller than **14px** site-wide.
+- **No continuous decorative animation**: ambient/decorative motion must be static or paused by default; animate only in response to real state (e.g. an equalizer only while audio plays). Always honor `prefers-reduced-motion`.
+- Aim for a human-crafted, Indian-classical-meets-Western-notation aesthetic — avoid generic AI defaults (see `docs/hallucinations.md` and design discussions).
+
 ### Memory
 This project uses **Supermemory** (cloud) for persistent memory. Always pass `containerTag: "musicsheetsOracle"` so its memory stays separate from other projects. The full memory convention (when to recall / save) is defined globally in `~/.config/opencode/AGENTS.md`. Local structured log: `docs/MEMORY.md`.
 

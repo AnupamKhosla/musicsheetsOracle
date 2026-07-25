@@ -76,7 +76,7 @@ export default function Navigation() {
   return (
     <header ref={navRef} className="sticky top-0 z-999 bg-white/95 backdrop-blur border-b border-gray-200 shadow-sm">
       {/* ── Tier 1 · brand + Ragas / Genres dropdowns ───────────────────── */}
-      <div className="container flex items-center gap-2 h-14">
+      <div className="container flex items-center gap-3 h-16">
         {/* mobile hamburger */}
         <button
           className="md:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-200 text-gray-700 active:scale-95 transition-transform"
@@ -87,10 +87,10 @@ export default function Navigation() {
           <i className={`uil ${mobileMenuOpen ? 'uil-times' : 'uil-bars'} text-lg`} />
         </button>
 
-        <Link href="/" className="flex items-center gap-2 shrink-0 group">
-          <img className="w-auto h-7" src="/logo.svg" alt="Clef symbol logo" />
-          <span className="font-head-ebgaramond text-xl font-semibold tracking-wide text-gray-900 group-hover:text-rose-600 transition-colors">
-            MusicSheets
+        <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
+          <img className="w-auto h-11" src="/logo.svg" alt="MusicSheets — tanpura shaped as a musical note" />
+          <span className="font-head-ebgaramond text-2xl font-semibold tracking-wide text-gray-900 group-hover:text-rose-700 transition-colors">
+            Music<span className="text-rose-700">Sheets</span>
           </span>
         </Link>
 
@@ -172,7 +172,7 @@ export default function Navigation() {
           </button>
           <Link
             href="/create"
-            className="pointer-events-none cursor-not-allowed hidden sm:inline-flex items-center gap-1.5 h-9 px-4 rounded-full border border-gray-200 text-[13.5px] font-semibold text-gray-400"
+            className="pointer-events-none cursor-not-allowed hidden sm:inline-flex items-center gap-1.5 h-9 px-4 rounded-full border border-gray-200 text-sm font-semibold text-gray-400"
           >
             Contribute <i className="uil uil-edit" />
           </Link>
@@ -201,7 +201,7 @@ export default function Navigation() {
                     key={r.value}
                     href={`/search?scaleName=${r.value}`}
                     prefetch={false}
-                    className="px-2.5 py-1.5 rounded-lg text-[13px] text-gray-600 hover:bg-rose-50 hover:text-rose-700"
+                    className="px-2.5 py-1.5 rounded-lg text-sm text-gray-600 hover:bg-rose-50 hover:text-rose-700"
                   >
                     {r.label}
                   </Link>
@@ -220,7 +220,7 @@ export default function Navigation() {
                     key={g.value}
                     href={`/search?genre=${g.value}`}
                     prefetch={false}
-                    className="px-2.5 py-1.5 rounded-lg text-[13px] text-gray-600 hover:bg-rose-50 hover:text-rose-700"
+                    className="px-2.5 py-1.5 rounded-lg text-sm text-gray-600 hover:bg-rose-50 hover:text-rose-700"
                   >
                     {g.label}
                   </Link>

@@ -161,7 +161,7 @@ export default function PlayerControls({
         background: '#fef2f2',
         border: '1px solid #fecdd3',
         borderRadius: 6,
-        fontSize: '0.85rem',
+        fontSize: '0.875rem',
         flexWrap: 'wrap',
       }}
     >
@@ -207,7 +207,7 @@ export default function PlayerControls({
         />
         &nbsp;BPM
       </label>
-      <span style={{ color: '#9F1239', fontSize: '0.75rem', marginLeft: 'auto' }}>
+      <span style={{ color: '#9F1239', fontSize: '0.875rem', marginLeft: 'auto' }}>
         ({events.length} notes)
       </span>
     </div>

@@ -30,7 +30,7 @@ export default async function HomePage() {
         <div className="container relative pt-8 pb-8">
           {/* slim banner */}
           <div className="mb-6">
-            <p className="text-[12px] font-semibold tracking-[0.22em] uppercase text-rose-600 mb-2">
+            <p className="text-sm font-semibold tracking-[0.22em] uppercase text-rose-600 mb-2">
               Hindustani · Bhatkhande notation
             </p>
             <h1 className="font-head-ebgaramond text-3xl sm:text-5xl leading-[1.05] font-semibold text-gray-900">
@@ -42,7 +42,7 @@ export default async function HomePage() {
               {SARGAM.map((s, i) => (
                 <span
                   key={i}
-                  className="sargam-dot w-7 h-7 sm:w-8 sm:h-8 inline-flex items-center justify-center rounded-lg border text-[13px] sm:text-sm font-semibold transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
+                  className="sargam-dot w-7 h-7 sm:w-8 sm:h-8 inline-flex items-center justify-center rounded-lg border text-sm font-semibold transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
                   style={{
                     color: i % 2 ? '#be123c' : '#4b5563',
                     borderColor: 'rgba(225,29,72,0.2)',
@@ -67,7 +67,7 @@ export default async function HomePage() {
       {/* ── Quick raga chips (horizontal scroll) ───────────────────────── */}
       <section className="container relative pb-2">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-2">
-          <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-gray-400">Ragas:</span>
+          <span className="shrink-0 text-sm font-semibold uppercase tracking-wide text-gray-400">Ragas:</span>
           {FEATURED_RAGAS.map((r) => {
             const entry = RAGAS.find((x) => x.label === r);
             return (
@@ -75,7 +75,7 @@ export default async function HomePage() {
                 key={r}
                 href={`/search?scaleName=${entry?.value ?? r}`}
                 prefetch={false}
-                className="shrink-0 px-3.5 h-8 inline-flex items-center rounded-full bg-white border border-rose-100 text-[13px] font-medium text-rose-700 hover:bg-rose-600 hover:text-white hover:border-rose-600 hover:shadow transition-all duration-200"
+                className="shrink-0 px-3.5 h-8 inline-flex items-center rounded-full bg-white border border-rose-100 text-sm font-medium text-rose-700 hover:bg-rose-600 hover:text-white hover:border-rose-600 hover:shadow transition-all duration-200"
               >
                 {r}
               </Link>
@@ -83,7 +83,7 @@ export default async function HomePage() {
           })}
           <Link
             href="/search"
-            className="shrink-0 px-3 h-8 inline-flex items-center rounded-full text-[13px] font-semibold text-gray-500 hover:text-rose-600 transition-colors"
+            className="shrink-0 px-3 h-8 inline-flex items-center rounded-full text-sm font-semibold text-gray-500 hover:text-rose-600 transition-colors"
           >
             All {RAGAS.length} →
           </Link>
@@ -124,13 +124,13 @@ export default async function HomePage() {
 
           {/* genre quick links */}
           <div className="lg:col-span-12 rounded-2xl bg-white border border-gray-100 shadow-sm px-5 py-3.5 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-400 me-2">Genres</span>
+            <span className="text-sm font-semibold uppercase tracking-wide text-gray-400 me-2">Genres</span>
             {GENRES.map((g) => (
               <Link
                 key={g.value}
                 href={`/search?genre=${g.value}`}
                 prefetch={false}
-                className="px-3 h-7 inline-flex items-center rounded-full border border-gray-200 text-[12.5px] font-medium text-gray-600 hover:border-rose-300 hover:text-rose-700 hover:bg-rose-50 transition-colors"
+                className="px-3 h-7 inline-flex items-center rounded-full border border-gray-200 text-sm font-medium text-gray-600 hover:border-rose-300 hover:text-rose-700 hover:bg-rose-50 transition-colors"
               >
                 {g.label}
               </Link>

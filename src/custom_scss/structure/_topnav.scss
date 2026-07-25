@@ -158,7 +158,7 @@
       > li {
         @apply ltr:float-left rtl:float-right block relative my-0 mx-[10px] static;
         > a {
-          @apply block text-black dark:text-white text-[13px] bg-transparent font-bold tracking-[1px] leading-6 uppercase px-[14px] #{!important};
+          @apply block text-black dark:text-white text-sm bg-transparent font-bold tracking-[1px] leading-6 uppercase px-[14px] #{!important};
           &:hover, 
           &:active {
             @apply text-rose-600;
@@ -173,7 +173,7 @@
         .submenu.megamenu {
           li {
             .megamenu-head {
-              @apply py-[10px] px-5 whitespace-nowrap text-xs uppercase tracking-[0.04em] font-bold text-slate-400 #{!important};
+              @apply py-[10px] px-5 whitespace-nowrap text-sm uppercase tracking-[0.04em] font-bold text-slate-400 #{!important};
             }
           }
         }
@@ -361,7 +361,7 @@
             @apply relative;
             a {
               transition: all 0.3s;
-              @apply  py-[10px] px-5 clear-both whitespace-nowrap text-[11px] uppercase tracking-[0.04em] font-bold text-black dark:text-white leading-[17px] block;
+              @apply  py-[10px] px-5 clear-both whitespace-nowrap text-sm uppercase tracking-[0.04em] font-bold text-black dark:text-white leading-[17px] block;
               &:hover {
                 @apply text-rose-600 dark:text-rose-600 #{!important};
               }
@@ -500,7 +500,7 @@
           li {
             a {
               transition: all 0.3s;
-              @apply block relative py-[7px] px-[15px] uppercase text-[11px] tracking-[0.04em] font-bold text-black dark:text-white #{!important};
+              @apply block relative py-[7px] px-[15px] uppercase text-sm tracking-[0.04em] font-bold text-black dark:text-white #{!important};
             }
           }
           &.megamenu {
@@ -514,7 +514,7 @@
                 @apply list-none ps-0;
                 > li {
                   > span {
-                    @apply block relative py-[10px] px-[15px] uppercase text-xs tracking-[2px] text-slate-200;
+                    @apply block relative py-[10px] px-[15px] uppercase text-sm tracking-[2px] text-slate-200;
                   }
                 }
               }

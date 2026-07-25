@@ -79,11 +79,11 @@ export default function ConversionDemo() {
   return (
     <div className="rounded-2xl bg-white border border-rose-100 shadow-lg shadow-rose-100/40 overflow-hidden">
       <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-rose-50 bg-rose-50/50">
-        <span className="inline-flex items-center gap-2.5 text-[13px] font-semibold text-rose-700">
+        <span className="inline-flex items-center gap-2.5 text-sm font-semibold text-rose-700">
           <EqBars className="text-rose-600" active={playing} />
           Live conversion · press play
         </span>
-        <span className="text-xs text-gray-400 hidden sm:inline">Raag Bhupali · aroh–avroh · 16 beats</span>
+        <span className="text-sm text-gray-600 hidden sm:inline">Raag Bhupali · aroh–avroh · 16 beats</span>
       </div>
 
       {/* The two notations, beat-aligned. On mobile the Bhatkhande grid comes
@@ -91,7 +91,7 @@ export default function ConversionDemo() {
           conversion reads top-to-bottom. The connector always sits between. */}
       <div className="flex flex-col">
         <div className="order-1 lg:order-3 px-2 sm:px-5 pb-4">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1 text-center">
+          <p className="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-1 text-center">
             Indian Bhatkhande (sargam)
           </p>
           <IndianNotation xmlContent={DEMO_XML} currentBeat={currentBeat} language="english" />
@@ -100,14 +100,14 @@ export default function ConversionDemo() {
         {/* animated connector — middle in both layouts */}
         <div className="order-2 flex items-center justify-center gap-2 py-1.5" aria-hidden>
           <span className="h-px w-10 bg-rose-200" />
-          <span className="text-rose-500 text-xs font-semibold tracking-widest uppercase animate-pulse">
+          <span className="text-rose-700 text-sm font-semibold tracking-widest uppercase">
             ⇅ beat-for-beat
           </span>
           <span className="h-px w-10 bg-rose-200" />
         </div>
 
         <div className="order-3 lg:order-1 px-3 sm:px-5 pt-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1 text-center">
+          <p className="text-sm font-semibold uppercase tracking-wide text-slate-400 mb-1 text-center">
             Western staff
           </p>
           <div className="demo-western">
