@@ -8,7 +8,7 @@ export default function PostSummary(props: any) {
         <Link href={`/post/${id}`} className="block font-head-ebgaramond text-lg font-semibold text-[#3a2b1c] hover:text-rose-800 transition-colors">
           {props.sheetName}
         </Link>
-        <p className="paper-pressed -mx-1 px-4 py-2 mt-3 text-sm text-[#6b543c]">
+        <p className="paper-raised -mx-1 px-4 py-2 mt-3 text-sm text-[#6b543c]">
           <span className="font-semibold text-[#8a6f4f]">Scale: </span>
           {props.scale}
         </p>

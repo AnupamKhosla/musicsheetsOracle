@@ -11,26 +11,26 @@ body {
         radial-gradient(ellipse 130% 100% at 50% 40%, transparent 60%, rgba(120, 85, 45, 0.10) 100%),
         /* ruled staff lines */
         repeating-linear-gradient(to bottom, transparent 0 34px, rgba(110, 84, 54, 0.055) 34px 35px),
-        /* vertical spine crease (the fold of an open folio) */
+        /* vertical spine — the paper curving DOWN into a valley fold */
         linear-gradient(90deg,
-            transparent calc(50% - 3px),
-            rgba(122, 85, 42, 0.05) calc(50% - 1px),
-            rgba(255, 252, 243, 0.55) 50%,
-            rgba(122, 85, 42, 0.06) calc(50% + 1px),
-            transparent calc(50% + 3px)),
-        /* two horizontal fold creases */
+            transparent calc(50% - 75px),
+            rgba(110, 78, 40, 0.14) calc(50% - 1px),
+            rgba(82, 58, 30, 0.22) 50%,
+            rgba(110, 78, 40, 0.14) calc(50% + 1px),
+            transparent calc(50% + 75px)),
+        /* two horizontal folds — same valley treatment */
         linear-gradient(180deg,
-            transparent calc(33% - 3px),
-            rgba(122, 85, 42, 0.035) calc(33% - 1px),
-            rgba(255, 252, 243, 0.45) 33%,
-            rgba(122, 85, 42, 0.045) calc(33% + 1px),
-            transparent calc(33% + 3px)),
+            transparent calc(33% - 58px),
+            rgba(110, 78, 40, 0.11) calc(33% - 1px),
+            rgba(82, 58, 30, 0.18) 33%,
+            rgba(110, 78, 40, 0.11) calc(33% + 1px),
+            transparent calc(33% + 58px)),
         linear-gradient(180deg,
-            transparent calc(66% - 3px),
-            rgba(122, 85, 42, 0.035) calc(66% - 1px),
-            rgba(255, 252, 243, 0.45) 66%,
-            rgba(122, 85, 42, 0.045) calc(66% + 1px),
-            transparent calc(66% + 3px)),
+            transparent calc(66% - 58px),
+            rgba(110, 78, 40, 0.11) calc(66% - 1px),
+            rgba(82, 58, 30, 0.18) 66%,
+            rgba(110, 78, 40, 0.11) calc(66% + 1px),
+            transparent calc(66% + 58px)),
         /* paper grain */
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23p)' opacity='0.5'/%3E%3C/svg%3E");
     background-attachment: fixed, fixed, fixed, fixed, fixed, fixed;
@@ -74,16 +74,23 @@ body {
     position: relative;
     background: linear-gradient(145deg, #fbf4e5, #f0e6cf);
     border-radius: 10px;
-    box-shadow:
-        9px 9px 22px rgba(122, 90, 50, 0.17),
-        -9px -9px 22px rgba(255, 253, 246, 0.95);
-    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    /* bevelled edge reads as raised relief — light catches the top-left edge,
+       the bottom-right sits in shadow. No floating drop-shadow, so the card
+       stays part of the sheet, pushed out from behind. */
+    border: 1px solid;
+    border-color:
+        rgba(255, 253, 244, 0.95)
+        rgba(206, 181, 136, 0.55)
+        rgba(184, 155, 104, 0.7)
+        rgba(255, 253, 244, 0.85);
+    transition: border-color 0.25s ease, background 0.25s ease;
 }
 .paper-raised:hover {
-    transform: translateY(-4px);
-    box-shadow:
-        13px 15px 30px rgba(122, 90, 50, 0.22),
-        -10px -10px 24px rgba(255, 253, 246, 0.95);
+    border-color:
+        rgba(255, 253, 244, 1)
+        rgba(190, 142, 92, 0.75)
+        rgba(166, 136, 86, 0.85)
+        rgba(255, 253, 244, 0.9);
 }
 
 /* debossed key-line frame inside a raised card — the letterpress double-edge */
@@ -117,12 +124,12 @@ body {
 
 /* ── The letterpress header band (part of the same sheet) ─────────────── */
 .paper-header {
-    background: linear-gradient(180deg, #f8f1e1, #f2e8d2);
+    background: linear-gradient(180deg, #fefcf7, #f8f2e6);
     box-shadow:
-        0 1px 0 rgba(255, 253, 246, 0.95) inset,
-        0 -3px 6px rgba(122, 90, 50, 0.10) inset,
-        0 6px 16px rgba(122, 90, 50, 0.14);
-    border-bottom: 1px solid rgba(160, 118, 68, 0.35);
+        0 1px 0 rgba(255, 255, 255, 0.95) inset,
+        0 -2px 5px rgba(122, 90, 50, 0.08) inset,
+        0 4px 12px rgba(122, 90, 50, 0.12);
+    border-bottom: 1px solid rgba(160, 118, 68, 0.30);
 }
 
 /* ── Waveform section divider (static — accessible) ──────────────────── */
