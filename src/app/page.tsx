@@ -93,44 +93,44 @@ export default async function HomePage() {
       {/* ── Bento · what the site does ─────────────────────────────────── */}
       <section className="container relative py-8">
         <div className="grid lg:grid-cols-12 gap-5">
-          <div className="lg:col-span-5 rounded-2xl bg-white border border-gray-100 shadow-sm p-6 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-            <i className="uil uil-music-note text-2xl text-rose-600" aria-hidden />
-            <h3 className="mt-3 font-head-ebgaramond text-xl font-semibold text-gray-900">Two notations, one song</h3>
-            <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+          <div className="lg:col-span-5 paper-raised p-6">
+            <i className="uil uil-music-note text-2xl text-rose-700" aria-hidden />
+            <h3 className="mt-3 font-head-ebgaramond text-xl font-semibold text-[#3a2b1c]">Two notations, one song</h3>
+            <p className="mt-2 text-sm text-[#6b543c] leading-relaxed">
               Every sheet renders as a Western staff and a Bhatkhande sargam
               grid, beat-aligned, so you can read either tradition — or both at once.
             </p>
           </div>
 
-          <div className="lg:col-span-4 rounded-2xl bg-white border border-gray-100 shadow-sm p-6 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-            <i className="uil uil-play-circle text-2xl text-rose-600" aria-hidden />
-            <h3 className="mt-3 font-head-ebgaramond text-xl font-semibold text-gray-900">Beat-synced playback</h3>
-            <p className="mt-2 text-sm text-gray-600 leading-relaxed">
+          <div className="lg:col-span-4 paper-raised p-6">
+            <i className="uil uil-play-circle text-2xl text-rose-700" aria-hidden />
+            <h3 className="mt-3 font-head-ebgaramond text-xl font-semibold text-[#3a2b1c]">Beat-synced playback</h3>
+            <p className="mt-2 text-sm text-[#6b543c] leading-relaxed">
               Press play and the current beat lights up in both notations as it
               sounds. Change tempo and voice while you learn.
             </p>
           </div>
 
-          <div className="lg:col-span-3 rounded-2xl bg-rose-600 text-white shadow-sm p-6 flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+          <div className="lg:col-span-3 paper-raised p-6 flex flex-col justify-between !bg-[linear-gradient(145deg,#d3365a,#9f1239)]">
             <div>
-              <i className="uil uil-upload-alt text-2xl" aria-hidden />
-              <h3 className="mt-3 font-head-ebgaramond text-xl font-semibold">Convert your own</h3>
-              <p className="mt-2 text-sm text-rose-100 leading-relaxed">Upload MusicXML, get sargam instantly.</p>
+              <i className="uil uil-upload-alt text-2xl text-[#f3e7d0]" aria-hidden />
+              <h3 className="mt-3 font-head-ebgaramond text-xl font-semibold text-[#fdf6e8]">Convert your own</h3>
+              <p className="mt-2 text-sm text-[#f7dcc8] leading-relaxed">Upload MusicXML, get sargam instantly.</p>
             </div>
-            <span className="mt-4 inline-flex items-center justify-center h-10 rounded-lg bg-white/15 text-sm font-semibold opacity-80">
+            <span className="mt-4 inline-flex items-center justify-center h-10 rounded-lg bg-[#fdf6e8]/15 text-sm font-semibold text-[#fdf6e8]">
               Contribute soon
             </span>
           </div>
 
           {/* genre quick links */}
-          <div className="lg:col-span-12 rounded-2xl bg-white border border-gray-100 shadow-sm px-5 py-3.5 flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold uppercase tracking-wide text-gray-400 me-2">Genres</span>
+          <div className="lg:col-span-12 paper-pressed px-5 py-3.5 flex flex-wrap items-center gap-2">
+            <span className="text-sm font-semibold uppercase tracking-wide text-[#8a6f4f] me-2">Genres</span>
             {GENRES.map((g) => (
               <Link
                 key={g.value}
                 href={`/search?genre=${g.value}`}
                 prefetch={false}
-                className="px-3 h-7 inline-flex items-center rounded-full border border-gray-200 text-sm font-medium text-gray-600 hover:border-rose-300 hover:text-rose-700 hover:bg-rose-50 transition-colors"
+                className="px-3 h-7 inline-flex items-center rounded-full border border-[#d9c69e] text-sm font-medium text-[#6b543c] hover:border-rose-400 hover:text-rose-800 hover:bg-[#f7edd8] transition-colors"
               >
                 {g.label}
               </Link>

@@ -77,13 +77,13 @@ export default function ConversionDemo() {
   }, []);
 
   return (
-    <div className="rounded-2xl bg-white border border-rose-100 shadow-lg shadow-rose-100/40 overflow-hidden">
-      <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-rose-50 bg-rose-50/50">
-        <span className="inline-flex items-center gap-2.5 text-sm font-semibold text-rose-700">
-          <EqBars className="text-rose-600" active={playing} />
+    <div className="paper-raised paper-raised--frame overflow-hidden">
+      <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-[#e6d7b6] bg-[#f3ead4]">
+        <span className="inline-flex items-center gap-2.5 text-sm font-semibold text-rose-800">
+          <EqBars className="text-rose-700" active={playing} />
           Live conversion · press play
         </span>
-        <span className="text-sm text-gray-600 hidden sm:inline">Raag Bhupali · aroh–avroh · 16 beats</span>
+        <span className="text-sm text-[#7a6248] hidden sm:inline">Raag Bhupali · aroh–avroh · 16 beats</span>
       </div>
 
       {/* The two notations, beat-aligned. On mobile the Bhatkhande grid comes

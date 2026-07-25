@@ -1,122 +1,146 @@
-/* _ambient.scss — site-wide musical atmosphere. Pure CSS so it costs nothing
-   to ship and stays crisp on every device. */
+/* _ambient.scss — the material system: one real sheet of creased score-paper.
+   Every card is pressed OUT of that paper (embossed / letterpress relief), and
+   the Indian instruments live as faint line-engravings IN the paper, like the
+   plates of an old treatise. Nothing floats, nothing glows. */
 
-/* ── Fixed background layer (staff lines + drifting note glyphs) ───────── */
-.ambient {
+/* ── The sheet of paper (the whole page) ──────────────────────────────── */
+body {
+    background-color: #f5ecdc;
+    background-image:
+        /* aged edge vignette */
+        radial-gradient(ellipse 130% 100% at 50% 40%, transparent 60%, rgba(120, 85, 45, 0.10) 100%),
+        /* ruled staff lines */
+        repeating-linear-gradient(to bottom, transparent 0 34px, rgba(110, 84, 54, 0.055) 34px 35px),
+        /* vertical spine crease (the fold of an open folio) */
+        linear-gradient(90deg,
+            transparent calc(50% - 3px),
+            rgba(122, 85, 42, 0.05) calc(50% - 1px),
+            rgba(255, 252, 243, 0.55) 50%,
+            rgba(122, 85, 42, 0.06) calc(50% + 1px),
+            transparent calc(50% + 3px)),
+        /* two horizontal fold creases */
+        linear-gradient(180deg,
+            transparent calc(33% - 3px),
+            rgba(122, 85, 42, 0.035) calc(33% - 1px),
+            rgba(255, 252, 243, 0.45) 33%,
+            rgba(122, 85, 42, 0.045) calc(33% + 1px),
+            transparent calc(33% + 3px)),
+        linear-gradient(180deg,
+            transparent calc(66% - 3px),
+            rgba(122, 85, 42, 0.035) calc(66% - 1px),
+            rgba(255, 252, 243, 0.45) 66%,
+            rgba(122, 85, 42, 0.045) calc(66% + 1px),
+            transparent calc(66% + 3px)),
+        /* paper grain */
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23p)' opacity='0.5'/%3E%3C/svg%3E");
+    background-attachment: fixed, fixed, fixed, fixed, fixed, fixed;
+}
+
+/* ── Faint instrument engravings in the paper ─────────────────────────── */
+.instruments-bg {
     position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
     overflow: hidden;
 }
-
-/* faint five-line staff wash across the whole site */
-.ambient-staff {
+.instruments-bg svg {
     position: absolute;
-    inset: 0;
-    background-image: repeating-linear-gradient(
-        to bottom,
-        transparent 0,
-        transparent 30px,
-        rgba(190, 18, 60, 0.035) 30px,
-        rgba(190, 18, 60, 0.035) 31px
-    );
-    mask-image: radial-gradient(ellipse 120% 90% at 50% 0%, rgba(0, 0, 0, 0.8), transparent 75%);
-    -webkit-mask-image: radial-gradient(ellipse 120% 90% at 50% 0%, rgba(0, 0, 0, 0.8), transparent 75%);
+    color: #7c5f3f;
+}
+.instr-tanpura {
+    right: -40px;
+    top: 8%;
+    height: 84%;
+    opacity: 0.07;
+}
+.instr-tabla {
+    left: -30px;
+    bottom: -20px;
+    width: 340px;
+    opacity: 0.08;
+}
+@media (max-width: 900px) {
+    .instr-tanpura { opacity: 0.05; right: -70px; }
+    .instr-tabla { display: none; }
 }
 
-/* soft tonal glows, like light on a resonating body */
-.ambient-glow-a,
-.ambient-glow-b {
+/* ── Embossed / debossed paper relief (the coin-press effect) ───────────
+   Light falls from the top-left. A RAISED card catches light on its top-left
+   edge and casts a warm shadow bottom-right; a PRESSED panel does the inverse.
+   Both stay in the paper's own tone — no foreign colour, so they read as the
+   same sheet physically deformed. */
+.paper-raised {
+    position: relative;
+    background: linear-gradient(145deg, #fbf4e5, #f0e6cf);
+    border-radius: 10px;
+    box-shadow:
+        9px 9px 22px rgba(122, 90, 50, 0.17),
+        -9px -9px 22px rgba(255, 253, 246, 0.95);
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.paper-raised:hover {
+    transform: translateY(-4px);
+    box-shadow:
+        13px 15px 30px rgba(122, 90, 50, 0.22),
+        -10px -10px 24px rgba(255, 253, 246, 0.95);
+}
+
+/* debossed key-line frame inside a raised card — the letterpress double-edge */
+.paper-raised--frame::after {
+    content: '';
     position: absolute;
-    border-radius: 9999px;
-    filter: blur(70px);
-}
-.ambient-glow-a {
-    width: 460px;
-    height: 460px;
-    top: -140px;
-    inset-inline-end: -120px;
-    background: rgba(255, 228, 230, 0.55);
-}
-.ambient-glow-b {
-    width: 380px;
-    height: 380px;
-    bottom: -160px;
-    inset-inline-start: -140px;
-    background: rgba(254, 243, 199, 0.4);
+    inset: 8px;
+    border-radius: 6px;
+    pointer-events: none;
+    box-shadow:
+        inset 2px 2px 4px rgba(122, 90, 50, 0.10),
+        inset -2px -2px 4px rgba(255, 253, 246, 0.85);
 }
 
-/* drifting note & sargam glyphs — bobbing gently in place */
-.float-note {
-    position: absolute;
-    line-height: 1;
-    user-select: none;
-    opacity: 0;
-    animation: note-bob ease-in-out infinite;
-    will-change: transform, opacity;
-    filter: blur(0.4px);
-}
-@keyframes note-bob {
-    0%, 100% {
-        transform: translateY(0) rotate(-6deg);
-        opacity: calc(var(--o, 0.07) * 0.4);
-    }
-    50% {
-        transform: translateY(-16px) rotate(5deg);
-        opacity: var(--o, 0.07);
-    }
+.paper-pressed {
+    background: linear-gradient(145deg, #ede1c7, #f8f0de);
+    border-radius: 10px;
+    box-shadow:
+        inset 6px 6px 13px rgba(122, 90, 50, 0.14),
+        inset -6px -6px 13px rgba(255, 253, 246, 0.9);
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .float-note,
-    .tanpura-string,
-    .eq-bar,
-    .wave-divider path {
-        animation: none !important;
-    }
+/* a thin letterpress rule — looks pressed into the paper */
+.paper-rule {
+    height: 2px;
+    border: none;
+    border-radius: 2px;
+    background: rgba(122, 90, 50, 0.16);
+    box-shadow: 0 1px 0 rgba(255, 253, 246, 0.9);
 }
 
-/* ── Tanpura strings (opening section) ───────────────────────────────────
-   Four drone strings; a pluck of light travels along each while it breathes
-   vertically — different lengths & phases so they never sync. */
-.tanpura-strings {
-    position: absolute;
-    inset-inline: 0;
-    top: 18%;
-    display: flex;
-    flex-direction: column;
-    gap: 26px;
-    opacity: 0.5;
+/* ── The letterpress header band (part of the same sheet) ─────────────── */
+.paper-header {
+    background: linear-gradient(180deg, #f8f1e1, #f2e8d2);
+    box-shadow:
+        0 1px 0 rgba(255, 253, 246, 0.95) inset,
+        0 -3px 6px rgba(122, 90, 50, 0.10) inset,
+        0 6px 16px rgba(122, 90, 50, 0.14);
+    border-bottom: 1px solid rgba(160, 118, 68, 0.35);
 }
-.tanpura-string {
-    height: 1px;
+
+/* ── Waveform section divider (static — accessible) ──────────────────── */
+.wave-divider {
+    display: block;
     width: 100%;
-    background:
-        linear-gradient(90deg, transparent, rgba(190, 18, 60, 0.28) 30%, rgba(217, 119, 6, 0.3) 55%, transparent 90%);
-    background-size: 220% 100%;
-    animation:
-        string-glow 6s linear infinite,
-        string-breathe 3.4s ease-in-out infinite;
-    transform-origin: center;
+    height: 26px;
+    color: rgba(150, 100, 50, 0.45);
 }
-.tanpura-string:nth-child(1) { animation-delay: 0s, 0s; }
-.tanpura-string:nth-child(2) { animation-delay: -1.6s, -0.8s; opacity: 0.8; }
-.tanpura-string:nth-child(3) { animation-delay: -3.1s, -1.9s; opacity: 0.65; }
-.tanpura-string:nth-child(4) { animation-delay: -4.4s, -2.6s; opacity: 0.5; }
-
-@keyframes string-glow {
-    0%   { background-position: 130% 0; }
-    100% { background-position: -60% 0; }
-}
-@keyframes string-breathe {
-    0%, 100% { transform: translateY(0) scaleY(1); }
-    50%      { transform: translateY(2px) scaleY(1.6); }
+.wave-divider path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-dasharray: 6 7;
 }
 
-/* ── Live equalizer bars ─────────────────────────────────────────────────
-   Idle: a still, varied equalizer (no motion — accessible). Add `.eq-active`
-   while music actually plays to make the bars bounce. */
+/* ── Live equalizer bars ───────────────────────────────────────────────── */
 .eq {
     display: inline-flex;
     align-items: flex-end;
@@ -147,19 +171,10 @@
     50%      { transform: scaleY(1); }
 }
 
-/* ── Waveform section divider ───────────────────────────────────────────
-   A static audio-style curve. Deliberately not animated — a continuously
-   moving decorative line is a vestibular/accessibility liability. */
-.wave-divider {
-    display: block;
-    width: 100%;
-    height: 26px;
-    color: rgba(190, 18, 60, 0.35);
-}
-.wave-divider path {
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.4;
-    stroke-linecap: round;
-    stroke-dasharray: 6 7;
+@media (prefers-reduced-motion: reduce) {
+    .eq-bar,
+    .paper-raised {
+        animation: none !important;
+        transition: none !important;
+    }
 }

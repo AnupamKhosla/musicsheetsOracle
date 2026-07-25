@@ -29,24 +29,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="app-container relative z-10 min-h-screen flex flex-col">
           <Navigation />
           <main className="flex-1 flex flex-col">{children}</main>
-          <footer className="mt-auto border-t border-rose-100 bg-[#fdf6f3]">
+          <footer className="mt-auto paper-header">
             <div className="container flex flex-col md:flex-row md:items-center gap-4 py-8">
               <a href="/" className="flex items-center gap-3 group">
-                <img className="w-auto h-14" src="/logo.svg" alt="MusicSheets — tanpura shaped as a musical note" />
+                <img className="w-auto h-14" src="/logo.svg" alt="MusicSheets — a swara singing a meend" />
                 <span className="leading-tight">
-                  <span className="block font-head-ebgaramond text-xl font-semibold text-gray-900 group-hover:text-rose-700 transition-colors">
-                    Music<span className="text-rose-700">Sheets</span>
+                  <span className="block font-head-ebgaramond text-xl font-semibold text-[#3a2b1c] group-hover:text-rose-800 transition-colors">
+                    Music<span className="text-rose-800">Sheets</span>
                   </span>
-                  <span className="block text-sm text-gray-500">Western staff &amp; Bhatkhande sargam, side by side</span>
+                  <span className="block text-sm text-[#7a6248]">Western staff &amp; Bhatkhande sargam, side by side</span>
                 </span>
               </a>
-              <p className="text-sm text-gray-500 md:ms-auto md:text-end max-w-md">
+              <p className="text-sm text-[#7a6248] md:ms-auto md:text-end max-w-md">
                 Designed &amp; developed by{' '}
-                <a className="text-rose-700 hover:text-rose-900 underline decoration-rose-300 underline-offset-2" href="https://www.linkedin.com/in/anupamkhosla/">
+                <a className="text-rose-800 hover:text-rose-950 underline decoration-rose-300 underline-offset-2" href="https://www.linkedin.com/in/anupamkhosla/">
                   Anupam Khosla
                 </a>
                 .{' '}
-                <a className="text-rose-700 hover:text-rose-900 underline decoration-rose-300 underline-offset-2" href="https://github.com/AnupamKhosla/musicsheetsOracle">
+                <a className="text-rose-800 hover:text-rose-950 underline decoration-rose-300 underline-offset-2" href="https://github.com/AnupamKhosla/musicsheetsOracle">
                   Design &amp; code
                 </a>{' '}
                 licensed CC BY-SA 4.0.

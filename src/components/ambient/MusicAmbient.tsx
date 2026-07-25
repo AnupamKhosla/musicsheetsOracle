@@ -1,41 +1,38 @@
-// Fixed, site-wide musical atmosphere: a faint staff wash, warm tonal glows,
-// and a handful of note + sargam glyphs bobbing like they've drifted off the
-// page. Pure decoration — pointer-events are off and it sits behind content.
-
-const GLYPHS: { ch: string; top: string; left: string; size: number; dur: number; delay: number; o: number; rose?: boolean }[] = [
-  { ch: '♪', top: '16%', left: '6%',  size: 26, dur: 9,  delay: 0,    o: 0.09, rose: true },
-  { ch: 'स',  top: '30%', left: '88%', size: 24, dur: 11, delay: -3,   o: 0.08 },
-  { ch: '♫', top: '58%', left: '10%', size: 30, dur: 10, delay: -5,   o: 0.07 },
-  { ch: 'रे', top: '70%', left: '90%', size: 22, dur: 12, delay: -2,   o: 0.07, rose: true },
-  { ch: '♩', top: '84%', left: '22%', size: 20, dur: 9,  delay: -6,   o: 0.06 },
-  { ch: '♬', top: '12%', left: '70%', size: 22, dur: 10, delay: -4,   o: 0.06 },
-  { ch: 'ग',  top: '46%', left: '46%', size: 26, dur: 13, delay: -7,   o: 0.05 },
-  { ch: '♪', top: '92%', left: '68%', size: 18, dur: 11, delay: -1.5, o: 0.06, rose: true },
-];
+// Faint line-engravings of Indian instruments pressed into the paper itself —
+// a tanpura standing down the right margin and a tabla pair low on the left,
+// like the plates of an old treatise. Static, low-opacity, behind everything.
 
 export default function MusicAmbient() {
   return (
-    <div className="ambient" aria-hidden="true">
-      <div className="ambient-staff" />
-      <div className="ambient-glow-a" />
-      <div className="ambient-glow-b" />
-      {GLYPHS.map((g, i) => (
-        <span
-          key={i}
-          className="float-note"
-          style={{
-            top: g.top,
-            left: g.left,
-            fontSize: g.size,
-            color: g.rose ? '#be123c' : '#64748b',
-            animationDuration: `${g.dur}s`,
-            animationDelay: `${g.delay}s`,
-            ['--o' as string]: g.o,
-          }}
-        >
-          {g.ch}
-        </span>
-      ))}
+    <div className="instruments-bg" aria-hidden="true">
+      {/* Tanpura */}
+      <svg className="instr-tanpura" viewBox="0 0 200 620" fill="none" stroke="currentColor">
+        <g strokeWidth="2.5">
+          <ellipse cx="100" cy="470" rx="72" ry="96" />
+          <ellipse cx="100" cy="470" rx="58" ry="80" strokeWidth="1.2" opacity="0.6" />
+          <path d="M86 388 L88 96 M114 388 L112 96" />
+          <path d="M88 96 C88 78 96 70 100 70 C104 70 112 78 112 96" />
+          <path d="M100 70 C94 60 96 48 104 46 C112 44 116 52 110 58" strokeWidth="2" />
+          <circle cx="78" cy="120" r="6" strokeWidth="2" />
+          <circle cx="78" cy="150" r="6" strokeWidth="2" />
+          <circle cx="122" cy="135" r="6" strokeWidth="2" />
+          <ellipse cx="100" cy="430" rx="26" ry="7" strokeWidth="1.8" />
+          <path d="M92 100 L90 428 M100 100 L100 428 M108 100 L110 428" strokeWidth="1.2" opacity="0.7" />
+        </g>
+      </svg>
+
+      {/* Tabla pair */}
+      <svg className="instr-tabla" viewBox="0 0 320 220" fill="none" stroke="currentColor">
+        <g strokeWidth="2.5">
+          <ellipse cx="105" cy="112" rx="74" ry="74" />
+          <ellipse cx="105" cy="112" rx="52" ry="52" strokeWidth="1.4" opacity="0.7" />
+          <circle cx="105" cy="112" r="21" strokeWidth="2" />
+          <circle cx="105" cy="112" r="8" strokeWidth="1.4" opacity="0.7" />
+          <ellipse cx="243" cy="120" rx="62" ry="62" />
+          <ellipse cx="243" cy="120" rx="43" ry="43" strokeWidth="1.4" opacity="0.7" />
+          <circle cx="243" cy="120" r="17" strokeWidth="2" />
+        </g>
+      </svg>
     </div>
   );
 }

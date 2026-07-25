@@ -26,14 +26,14 @@ export default function SearchForm({ searchSubmitCallback }: { searchSubmitCallb
   };
 
   const fieldClass =
-    'w-full h-11 px-3 rounded-lg border border-gray-200 bg-gray-50 text-sm outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-100 transition-colors';
+    'w-full h-11 px-3 rounded-lg border border-[#d9c69e] bg-[#f1e7d0] text-sm text-[#3a2b1c] outline-none focus:border-rose-600 focus:ring-2 focus:ring-rose-200 transition-colors';
 
   return (
     <div className="container relative mt-6">
-      <form ref={formRef} onSubmit={handleSubmit} className="p-5 bg-white rounded-2xl shadow-md border border-gray-100">
+      <form ref={formRef} onSubmit={handleSubmit} className="paper-raised paper-raised--frame p-5">
         <div className="grid lg:grid-cols-5 md:grid-cols-2 grid-cols-1 gap-3">
           <div className="relative">
-            <label htmlFor="songName" className="block text-sm font-semibold text-gray-500 mb-1.5">Song name</label>
+            <label htmlFor="songName" className="block text-sm font-semibold text-[#8a6f4f] mb-1.5">Song name</label>
             <i className="uil uil-search absolute bottom-3 start-3 text-rose-500" />
             <input name="songName" id="songName" type="text" placeholder="E.g. Jabase" className={`${fieldClass} ps-9`} />
           </div>

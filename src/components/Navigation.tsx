@@ -74,7 +74,7 @@ export default function Navigation() {
     'h-10 rounded-lg border border-gray-200 bg-white ps-3 pe-8 text-sm text-gray-700 focus:border-rose-500 focus:ring-2 focus:ring-rose-100 outline-none transition-colors';
 
   return (
-    <header ref={navRef} className="sticky top-0 z-999 bg-white/95 backdrop-blur border-b border-gray-200 shadow-sm">
+    <header ref={navRef} className="sticky top-0 z-50 paper-header">
       {/* ── Tier 1 · brand + Ragas / Genres dropdowns ───────────────────── */}
       <div className="container flex items-center gap-3 h-16">
         {/* mobile hamburger */}
@@ -234,7 +234,7 @@ export default function Navigation() {
       {/* ── Tier 2 · search with filters (collapsible on mobile) ────────── */}
       <form
         onSubmit={runSearch}
-        className={`border-t border-gray-100 bg-gray-50/80 ${showSearch ? 'block' : 'hidden md:block'}`}
+        className={`border-t border-[#e2d3b2] bg-[#f1e7d0] ${showSearch ? 'block' : 'hidden md:block'}`}
       >
         <div className="container flex flex-wrap items-center gap-2 py-2.5">
           <div className="relative flex-1 min-w-[150px]">
