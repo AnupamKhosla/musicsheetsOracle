@@ -57,6 +57,7 @@ const DEMO_XML = `<?xml version="1.0" encoding="UTF-8"?>
 
 export default function ConversionDemo() {
   const [currentBeat, setCurrentBeat] = useState(-1);
+  const [playing, setPlaying] = useState(false);
 
   // Parse on the client only — parseMusicXMLString needs the browser DOMParser,
   // which doesn't exist during SSR. Starting from [] and filling in via an
@@ -79,7 +80,7 @@ export default function ConversionDemo() {
     <div className="rounded-2xl bg-white border border-rose-100 shadow-lg shadow-rose-100/40 overflow-hidden">
       <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-rose-50 bg-rose-50/50">
         <span className="inline-flex items-center gap-2.5 text-[13px] font-semibold text-rose-700">
-          <EqBars className="text-rose-600" />
+          <EqBars className="text-rose-600" active={playing} />
           Live conversion · press play
         </span>
         <span className="text-xs text-gray-400 hidden sm:inline">Raag Bhupali · aroh–avroh · 16 beats</span>
@@ -116,7 +117,7 @@ export default function ConversionDemo() {
       </div>
 
       <div className="px-3 sm:px-5 pb-4">
-        <PlayerControls events={events} label="Play the phrase" onBeatChange={setCurrentBeat} />
+        <PlayerControls events={events} label="Play the phrase" onBeatChange={setCurrentBeat} onPlayingChange={setPlaying} />
       </div>
     </div>
   );

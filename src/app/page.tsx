@@ -60,7 +60,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <div className="container relative -my-1">
+      <div className="container relative my-3">
         <WaveDivider />
       </div>
 
@@ -139,7 +139,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <div className="container relative -my-1">
+      <div className="container relative mt-6 mb-8">
         <WaveDivider />
       </div>
 

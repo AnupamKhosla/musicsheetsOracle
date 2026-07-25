@@ -12,6 +12,8 @@ interface PlayerControlsProps {
   voice?: Voice;
   /** Called on every animation frame with the current beat index (0-based). */
   onBeatChange?: (beat: number) => void;
+  /** Called whenever playback starts/stops so the UI can react (e.g. an EQ). */
+  onPlayingChange?: (playing: boolean) => void;
 }
 
 const VOICE_LABELS: Record<Voice, string> = {
@@ -29,6 +31,7 @@ export default function PlayerControls({
   label = 'Play',
   voice = 'triangle',
   onBeatChange,
+  onPlayingChange,
 }: PlayerControlsProps) {
   const [state, setState] = useState<'idle' | 'loading' | 'playing' | 'paused' | 'done'>('idle');
   const [bpm, setBpm] = useState<number>(defaultBpm);
@@ -38,6 +41,10 @@ export default function PlayerControls({
   const bpmRef = useRef<number>(defaultBpm);
   const offsetRef = useRef<number>(0); // beat offset the current Transport run represents
   const pausePositionRef = useRef<number>(0); // beat position when paused
+
+  useEffect(() => {
+    onPlayingChange?.(state === 'playing');
+  }, [state, onPlayingChange]);
 
   useEffect(() => {
     return () => {

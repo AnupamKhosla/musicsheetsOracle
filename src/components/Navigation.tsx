@@ -71,7 +71,7 @@ export default function Navigation() {
   };
 
   const selectClass =
-    'h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 focus:border-rose-500 focus:ring-2 focus:ring-rose-100 outline-none transition-colors';
+    'h-10 rounded-lg border border-gray-200 bg-white ps-3 pe-8 text-sm text-gray-700 focus:border-rose-500 focus:ring-2 focus:ring-rose-100 outline-none transition-colors';
 
   return (
     <header ref={navRef} className="sticky top-0 z-999 bg-white/95 backdrop-blur border-b border-gray-200 shadow-sm">
