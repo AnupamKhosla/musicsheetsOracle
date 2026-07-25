@@ -107,6 +107,8 @@ export default function IndianNotation({
                 holdLinks={row.holdLinks}
                 chordLinks={row.chordLinks}
                 crossBeatHolds={row.crossBeatHolds}
+                crossHoldStart={row.crossHoldStart}
+                crossHoldEnd={row.crossHoldEnd}
                 rowStartBeat={ri * 8}
                 currentBeat={currentBeat}
               />
@@ -129,6 +131,8 @@ function RowWithHeader({
   holdLinks,
   chordLinks,
   crossBeatHolds,
+  crossHoldStart,
+  crossHoldEnd,
   rowStartBeat,
   currentBeat,
 }: {
@@ -138,6 +142,8 @@ function RowWithHeader({
   holdLinks: boolean[][][];
   chordLinks: boolean[][][];
   crossBeatHolds: boolean[];
+  crossHoldStart: boolean[];
+  crossHoldEnd: boolean[];
   rowStartBeat: number;
   currentBeat: number;
 }) {
@@ -167,8 +173,8 @@ function RowWithHeader({
           const hold = holdLinks[i] || [];
           const chord = chordLinks[i] || [];
           const cbHold = crossBeatHolds[i] || false;
-          const cbHoldStart = cbHold && (i === 0 || !crossBeatHolds[i - 1]);
-          const cbHoldEnd = cbHold && (i === crossBeatHolds.length - 1 || !crossBeatHolds[i + 1]);
+          const cbHoldStart = crossHoldStart[i] || false;
+          const cbHoldEnd = crossHoldEnd[i] || false;
           return (
             <td
               key={i}

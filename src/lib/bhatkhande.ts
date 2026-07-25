@@ -74,10 +74,19 @@ export interface DisplayRow {
    * this swara position holds a CHORD combo — 2+ simultaneous notes merged into
    * one horizontal glyph group with a top bar + tint. False = single swara. */
   chordLinks: boolean[][][];
-  /** Parallel to cells (one per beat cell): true means a NoteInstance spans
-   * the boundary between this cell and the next — the smiley bracket `⌣`
-   * should visually continue across the cell border. */
+  /** Parallel to cells (one per beat cell): true means this cell is part of a
+   * cross-beat hold — a NoteInstance is sustained across a beat boundary, so a
+   * smiley bracket `⌣` is drawn under it. */
   crossBeatHolds: boolean[];
+  /** Parallel to cells: true means this cell is the FIRST cell of a cross-beat
+   * hold segment (the bracket's left arm starts here, inset). A new segment
+   * begins whenever a different held note starts — so two abutting held notes
+   * (e.g. a D half then an S' half) are two separate brackets with a visible
+   * hand-lift gap between them, not one misleading continuous bracket. */
+  crossHoldStart: boolean[];
+  /** Parallel to cells: true means this cell is the LAST cell of a cross-beat
+   * hold segment (the bracket's right arm ends here, inset). */
+  crossHoldEnd: boolean[];
 }
 
 export interface NotationData {
@@ -566,20 +575,28 @@ export function convertToBhatkhande(opts: NotationOptions): NotationData {
     chordLinksPerBeat.push([chordLinks]);
   }
 
-  // --- Cross-beat hold detection ---
-  // A NoteInstance that spans a beat boundary (startDiv < boundary && endDiv >
-  // boundary) means the held note continues from one cell into the next. Mark
-  // both cells so the renderer draws a smiley bracket across the border.
-  const crossBeatHoldsGlobal: boolean[] = new Array(totalBeats).fill(false);
+  // --- Cross-beat hold detection (segment-aware) ---
+  // First find where a held note actually CONTINUES across a beat boundary
+  // (some instance spans b→b+1). Two adjacent held notes that merely abut
+  // (e.g. a D half-note then an S' half-note) do NOT continue across their
+  // shared boundary, so they become two separate bracket segments with a
+  // visible hand-lift gap between them — not one misleading continuous bracket.
+  const continueAcross: boolean[] = new Array(totalBeats).fill(false);
   for (let b = 0; b < totalBeats - 1; b++) {
     const boundaryDiv = (b + 1) * divsPerBeat;
-    const spans = allInstances.some(
+    continueAcross[b] = allInstances.some(
       (inst) => inst.startDiv < boundaryDiv && inst.endDiv > boundaryDiv,
     );
-    if (spans) {
-      crossBeatHoldsGlobal[b] = true;
-      crossBeatHoldsGlobal[b + 1] = true;
-    }
+  }
+  const crossBeatHoldsGlobal: boolean[] = new Array(totalBeats).fill(false);
+  const crossHoldStartGlobal: boolean[] = new Array(totalBeats).fill(false);
+  const crossHoldEndGlobal: boolean[] = new Array(totalBeats).fill(false);
+  for (let b = 0; b < totalBeats; b++) {
+    const inLeft = b > 0 && continueAcross[b - 1];
+    const outRight = continueAcross[b];
+    if (inLeft || outRight) crossBeatHoldsGlobal[b] = true;
+    if (outRight && !inLeft) crossHoldStartGlobal[b] = true;
+    if (inLeft && !outRight) crossHoldEndGlobal[b] = true;
   }
 
   // --- Chord event count (mirror of previous behaviour) ---
@@ -601,13 +618,15 @@ export function convertToBhatkhande(opts: NotationOptions): NotationData {
     const holdLinks = holdLinksPerBeat.slice(i, i + ROW_BEATS);
     const chordLinks = chordLinksPerBeat.slice(i, i + ROW_BEATS);
     const crossBeatHolds = crossBeatHoldsGlobal.slice(i, i + ROW_BEATS);
+    const crossHoldStart = crossHoldStartGlobal.slice(i, i + ROW_BEATS);
+    const crossHoldEnd = crossHoldEndGlobal.slice(i, i + ROW_BEATS);
     const beatMarks = cells.map((_, j) => {
       const globalIdx = i + j;
       const cycleLen = cycleBeats ?? 16;
       if (globalIdx % cycleLen === 0) return SAM;
       return HINDI_NUMS[mod(globalIdx % cycleLen, HINDI_NUMS.length)];
     });
-    rows.push({ cells, beatMarks, meendLinks, holdLinks, chordLinks, crossBeatHolds });
+    rows.push({ cells, beatMarks, meendLinks, holdLinks, chordLinks, crossBeatHolds, crossHoldStart, crossHoldEnd });
   }
 
   let taalNameLabel = '';
