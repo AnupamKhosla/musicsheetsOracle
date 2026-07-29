@@ -3,6 +3,11 @@ import { getDb } from '@/lib/db';
 
 const BASE_URL = 'https://musicsheets.site';
 
+function safeDate(value: unknown): Date {
+  const parsed = value ? new Date(value as string | number | Date) : new Date();
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const db = await getDb();
   const collection = db.collection('musicsheets');
@@ -12,7 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const sheetEntries: MetadataRoute.Sitemap = sheets.map((s) => ({
     url: `${BASE_URL}/post/${s._id.toString()}`,
-    lastModified: s.date ? new Date(s.date) : new Date(),
+    lastModified: safeDate(s.date),
     changeFrequency: 'weekly',
     priority: 0.8,
   }));
